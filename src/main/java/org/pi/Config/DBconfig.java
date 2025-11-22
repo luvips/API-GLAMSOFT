@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import io.github.cdimascio.dotenv.Dotenv;
 
 import javax.sql.DataSource;
+import java.util.concurrent.TimeUnit;
 
 
 public class DBconfig {
@@ -26,6 +27,11 @@ public class DBconfig {
             conf.setUsername(user);
             conf.setPassword(password);
             conf.setDriverClassName("com.mysql.cj.jdbc.Driver");
+
+            // --- OPTIMIZACIÓN RECOMENDADA ---
+            // Establece el tiempo máximo de vida de una conexión a 29 minutos.
+            // Esto previene errores de "connection closed" si MySQL cierra conexiones inactivas.
+            conf.setMaxLifetime(TimeUnit.MINUTES.toMillis(29));
 
             dataSource = new HikariDataSource(conf);
         }

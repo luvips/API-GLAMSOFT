@@ -1,170 +1,207 @@
 package org.pi.Controllers;
+
 import io.javalin.http.Context;
-import org.pi.Models.Usuario;
 import org.pi.Models.Empleado;
+import org.pi.Models.Usuario;
 import org.pi.Services.UsuarioService;
-import io.javalin.http.HttpStatus;
 import com.password4j.Password;
-import java.util.Map;
 import java.sql.SQLException;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 public class UsuarioController {
     private final UsuarioService usuarioService;
     private final TokenManager tokenManager;
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$");
 
     public UsuarioController(UsuarioService usuarioService, TokenManager tokenManager) {
         this.usuarioService = usuarioService;
         this.tokenManager = tokenManager;
     }
 
-    public void registrarUsuario(Context ctx){
-        try{
+    // --- Autenticación ---
+
+    public void register(Context ctx) {
+        try {
             Usuario usuario = ctx.bodyAsClass(Usuario.class);
-            String passHased = Password.hash(usuario.getPassword()).withBcrypt().getResult();
-            usuario.setPassword(passHased);
+            if (usuario.getEmail() == null || !EMAIL_PATTERN.matcher(usuario.getEmail()).matches()) {
+                errorResponse(ctx, 400, "El formato del email no es válido.");
+                return;
+            }
+            if (usuario.getPassword() == null || usuario.getPassword().length() < 8) {
+                errorResponse(ctx, 400, "La contraseña debe tener al menos 8 caracteres.");
+                return;
+            }
+            if (usuarioService.findUserByEmail(usuario.getEmail()) != null) {
+                errorResponse(ctx, 409, "El email ya está registrado.");
+                return;
+            }
+            String passHashed = Password.hash(usuario.getPassword()).withBcrypt().getResult();
+            usuario.setPassword(passHashed);
+            if (usuario.getIdRol() == 0) {
+                usuario.setIdRol(2); // Rol Cliente por defecto
+            }
             int id = usuarioService.saveUser(usuario);
-            usuario.setIdUsuario(id);
-            String token = tokenManager.issueToken("" + id);
-            ctx.status(201).json(Map.of(
-                    "userId", usuario.getIdUsuario(),
-                    "token", token,
-                    "success", true,
-                    "message", "Usuario registrado con exito"
-            ));
-        }catch (SQLException e){
-            ctx.status(500).result("Error al registrar el usuario" + e.getMessage());
-        }catch (Exception e){
-            ctx.status(500).result(e.getMessage());
+            String token = tokenManager.issueToken(String.valueOf(id));
+            Map<String, Object> data = new HashMap<>();
+            data.put("userId", id);
+            data.put("token", token);
+            successResponse(ctx, 201, "Usuario registrado con éxito", data);
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
-    public void verificarUsuario(Context ctx){
-        Usuario usuario = ctx.bodyAsClass(Usuario.class);
-        try{
-            Usuario user = usuarioService.findByUser(usuario);
-            if (user == null){
-                throw new SQLException("Usuario no encontrado");
+    public void login(Context ctx) {
+        try {
+            Usuario credentials = ctx.bodyAsClass(Usuario.class);
+            if (credentials.getEmail() == null || credentials.getPassword() == null) {
+                errorResponse(ctx, 400, "Email y contraseña son obligatorios.");
+                return;
             }
-            boolean rs = Password.check(usuario.getPassword(),user.getPassword()).withBcrypt();
-            if (rs){
-                String token = tokenManager.issueToken(user.getIdUsuario()+"");
-                ctx.json(Map.of(
-                        "userID",user.getIdUsuario(),
-                        "token",token,
-                        "success",true,
-                        "mensage","Usuario verificado"
-                ));
-            }  else {
-                ctx.status(404).result("Usuario no encontrado");
+            Usuario userFromDB = usuarioService.findUserByEmail(credentials.getEmail());
+            if (userFromDB == null) {
+                errorResponse(ctx, 404, "Usuario no encontrado.");
+                return;
+            }
+            if (Password.check(credentials.getPassword(), userFromDB.getPassword()).withBcrypt()) {
+                String token = tokenManager.issueToken(String.valueOf(userFromDB.getIdUsuario()));
+                Map<String, Object> data = new HashMap<>();
+                data.put("userId", userFromDB.getIdUsuario());
+                data.put("token", token);
+                successResponse(ctx, 200, "Login exitoso", data);
+            } else {
+                errorResponse(ctx, 401, "Contraseña incorrecta.");
             }
         } catch (SQLException e) {
-            ctx.status(403).json(Map.of(
-                    "error","Credenciales invalidad",
-                    "success", false,
-                    "message",e.getMessage()
-            ));
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
+    // --- CRUD de Usuarios ---
+
+    public void getById(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            Usuario usuario = usuarioService.findUserById(id);
+            if (usuario == null) {
+                errorResponse(ctx, 404, "Usuario no encontrado.");
+                return;
+            }
+            // No devolver la contraseña en la respuesta
+            usuario.setPassword(null);
+            successResponse(ctx, 200, "Usuario encontrado", usuario);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de usuario debe ser un número válido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void updateUser(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            Usuario usuario = ctx.bodyAsClass(Usuario.class);
+            if (usuarioService.findUserById(id) == null) {
+                errorResponse(ctx, 404, "Usuario no encontrado para actualizar.");
+                return;
+            }
+            usuario.setIdUsuario(id);
+            // Si se incluye una nueva contraseña, hashearla.
+            if (usuario.getPassword() != null && !usuario.getPassword().isEmpty()) {
+                 if (usuario.getPassword().length() < 8) {
+                    errorResponse(ctx, 400, "La contraseña debe tener al menos 8 caracteres.");
+                    return;
+                }
+                usuario.setPassword(Password.hash(usuario.getPassword()).withBcrypt().getResult());
+            }
+            
+            if (usuarioService.updateUser(usuario)) {
+                successResponse(ctx, 200, "Usuario actualizado correctamente", null);
+            } else {
+                errorResponse(ctx, 500, "No se pudo actualizar el usuario.");
+            }
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de usuario debe ser un número válido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
+        }
+    }
+
+    public void deleteUser(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            if (usuarioService.findUserById(id) == null) {
+                errorResponse(ctx, 404, "Usuario no encontrado para eliminar.");
+                return;
+            }
+            if (usuarioService.deleteUser(id)) {
+                successResponse(ctx, 200, "Usuario eliminado correctamente", null);
+            } else {
+                errorResponse(ctx, 500, "No se pudo eliminar el usuario.");
+            }
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de usuario debe ser un número válido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+    
+    // --- Métodos complejos para Empleados ---
+
     public void registrarEmpleadoCompleto(Context ctx) {
-    try {
-        Empleado empleado = ctx.bodyAsClass(Empleado.class);
-
-        String hashedPass = Password.hash(empleado.getPassword())
-                                   .withBcrypt()
-                                   .getResult();
-        empleado.setPassword(hashedPass);
-
-        int idUsuario = usuarioService.saveEmpleadoCompleto(empleado);
-        empleado.setIdUsuario(idUsuario);
-
-        String token = tokenManager.issueToken("" + idUsuario);
-
-        ctx.status(201).json(Map.of(
-                "success", true,
-                "message", "Empleado registrado con éxito",
-                "idUsuario", idUsuario,
-                "token", token
-        ));
-    }
-    catch (IllegalArgumentException e) {
-        ctx.status(400).json(Map.of(
-                "success", false,
-                "message", e.getMessage()
-        ));
-    }
-    catch (SQLException e) {
-        ctx.status(500).json(Map.of(
-                "success", false,
-                "message", "Error al registrar empleado: " + e.getMessage()
-        ));
-    }
-    catch (Exception e) {
-        ctx.status(500).json(Map.of(
-                "success", false,
-                "message", e.getMessage()
-        ));
-    }
+        try {
+            Empleado empleado = ctx.bodyAsClass(Empleado.class);
+            // Lógica de validación aquí...
+            String hashedPass = Password.hash(empleado.getPassword()).withBcrypt().getResult();
+            empleado.setPassword(hashedPass);
+            int idUsuario = usuarioService.saveEmpleadoCompleto(empleado);
+            successResponse(ctx, 201, "Empleado registrado con éxito", Map.of("idUsuario", idUsuario));
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error al registrar empleado: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
+        }
     }
 
     public void updateEmpleadoCompleto(Context ctx) {
-    try {
-        // Recibir JSON del body
-        Empleado empleado = ctx.bodyAsClass(Empleado.class);
-
-        // Usuario viene dentro porque Empleado extends Usuario
-        Usuario usuario = new Usuario(
-                empleado.getIdUsuario(),
-                empleado.getEmail(),
-                empleado.getPassword(),
-                empleado.getIdRol()
-        );
-
-        usuarioService.updateEmpleadoCompleto(usuario, empleado);
-
-        ctx.json(Map.of(
-                "success", true,
-                "message", "Empleado actualizado correctamente"
-        ));
-
-    } catch (IllegalArgumentException e) {
-        ctx.status(400).json(Map.of("error", e.getMessage()));
-
-    } catch (SQLException e) {
-        ctx.status(500).json(Map.of("error", "Error en base de datos: " + e.getMessage()));
-
-    } catch (Exception e) {
-        ctx.status(500).json(Map.of("error", e.getMessage()));
-    }
-}
-    public void findUser(Context ctx){
-        try{
-            String email = ctx.pathParam("email");
-            Usuario usuario = usuarioService.findUser(email);
-            ctx.json(usuario);
-        }catch (SQLException e){
-            ctx.status(404).result("No se encontro el elemento");
-        }
-    }
-
-    public void deleteUser(Context ctx){
-        try{
-            int id = Integer.parseInt(ctx.pathParam("id"));
-            usuarioService.deleteUser(id);
-            ctx.status(204).result("Se elimino el recurso con exito");
+        try {
+            Empleado empleado = ctx.bodyAsClass(Empleado.class);
+            Usuario usuario = new Usuario(empleado.getIdUsuario(), empleado.getEmail(), empleado.getPassword(), empleado.getIdRol());
+            // Lógica de validación aquí...
+            usuarioService.updateEmpleadoCompleto(usuario, empleado);
+            successResponse(ctx, 200, "Empleado actualizado correctamente", null);
         } catch (SQLException e) {
-            ctx.status(404).result("No se encontro el elemento");
+            errorResponse(ctx, 500, "Error en base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
-    public void updateUser(Context ctx){
-        try{
-            Usuario usuario = ctx.bodyAsClass(Usuario.class);
-            usuarioService.updateUser(usuario);
-            ctx.status(204).result("Se creo el elemento con exito");
-        } catch (Exception e) {
-            ctx.status(404).result("No se encontro el elemento");
+    // --- Métodos de ayuda ---
+
+    private void successResponse(Context ctx, int statusCode, String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        if (data != null) {
+            response.put("data", data);
         }
+        ctx.status(statusCode).json(response);
+    }
+
+    private void errorResponse(Context ctx, int statusCode, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", message);
+        ctx.status(statusCode).json(response);
     }
 }
