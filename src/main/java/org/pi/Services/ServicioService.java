@@ -13,73 +13,33 @@ public class ServicioService {
         this.servicioRepository = servicioRepository;
     }
 
-
     public List<Servicio> findAllServicios() throws SQLException {
         return servicioRepository.findAll();
     }
 
-    public List<Servicio> findByCategoria(int id)throws SQLException{
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID debe ser mayor a cero");
-        }
+    public Servicio findById(int id) throws SQLException {
+        // El servicio ahora devuelve null si no se encuentra,
+        // el controlador se encargará de la respuesta 404.
+        return servicioRepository.findById(id);
+    }
+
+    public List<Servicio> findByCategoria(int id) throws SQLException {
         return servicioRepository.findByCategoria(id);
     }
 
-    public List<Servicio> findNombresServicios() throws SQLException{
-        return servicioRepository.findNombresServicios();
-    }
-    public Servicio findServicio(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID del servicio debe ser mayor a cero");
-        }
-
-        Servicio servicio = servicioRepository.find(id);
-        if (servicio == null) {
-            throw new IllegalArgumentException("No se encontró el servicio con ID: " + id);
-        }
-
-        return servicio;
-    }
-
     public int saveServicio(Servicio servicio) throws SQLException {
-        validarServicio(servicio);
+        // Las validaciones de datos de entrada se manejan en el controlador.
+        // Aquí podrían ir validaciones de lógica de negocio (ej. no duplicados).
         return servicioRepository.save(servicio);
     }
 
-    public void updateServicio(int id, Servicio servicio) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID debe ser mayor a cero");
-        }
-        validarServicio(servicio);
-
-        // Asegurar que el ID sea consistente
+    public boolean updateServicio(int id, Servicio servicio) throws SQLException {
+        // Asegurar que el ID del objeto coincida con el ID de la URL
         servicio.setIdServicio(id);
-
-        servicioRepository.update(servicio);
+        return servicioRepository.update(servicio);
     }
 
-    public void deleteServicio(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID debe ser mayor a cero");
-        }
-
-        servicioRepository.delete(id);
-    }
-
-    //Validaciones comunes
-    private void validarServicio(Servicio servicio) {
-        if (servicio.getNombreServicio() == null || servicio.getNombreServicio().trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del servicio no puede estar vacío");
-        }
-        if (servicio.getPrecio() <= 0) {
-            throw new IllegalArgumentException("El precio debe ser mayor a cero");
-        }
-        if (servicio.getDuracionMinutos() <= 0) {
-            throw new IllegalArgumentException("La duración debe ser mayor a cero");
-        }
-        if (servicio.getIdCategoria() <= 0) {
-            throw new IllegalArgumentException("Debe asignarse una categoría válida");
-        }
+    public boolean deleteServicio(int id) throws SQLException {
+        return servicioRepository.delete(id);
     }
 }
-

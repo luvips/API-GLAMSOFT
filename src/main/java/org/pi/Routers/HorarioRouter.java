@@ -1,19 +1,22 @@
 package org.pi.Routers;
 
 import io.javalin.Javalin;
+import org.pi.Config.IRouter;
 import org.pi.Controllers.HorarioController;
 
-public class HorarioRouter {
+public class HorarioRouter implements IRouter {
     private final HorarioController horarioController;
 
-    public HorarioRouter(HorarioController horarioController) {
-        this.horarioController = horarioController;
+    public HorarioRouter(HorarioController controller) {
+        this.horarioController = controller;
     }
 
-    public void register(Javalin app){
-        app.get("/horarios",horarioController::findAll);
-        app.post("/horarios",horarioController::saveHorario);
-        app.delete("/horarios/{id}",horarioController::deleteHorario);
-        app.patch("/horarios",horarioController::updateHorario);
+    @Override
+    public void register(Javalin app) {
+        app.get("/api/horarios", horarioController::getAll);
+        app.post("/api/horarios", horarioController::create);
+        app.get("/api/horarios/{id}", horarioController::getById);
+        app.put("/api/horarios/{id}", horarioController::update);
+        app.delete("/api/horarios/{id}", horarioController::delete);
     }
 }

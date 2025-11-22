@@ -1,4 +1,5 @@
 package org.pi.Services;
+
 import org.pi.Models.Cita;
 import org.pi.Models.Estilista;
 import org.pi.Models.Horario;
@@ -8,7 +9,6 @@ import org.pi.dto.EstilistaDTO;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class EstilistaService {
     private final EstilistaRepository estilistaRepository;
@@ -17,62 +17,34 @@ public class EstilistaService {
         this.estilistaRepository = estilistaRepository;
     }
 
-
     public List<EstilistaDTO> findAllEstilistas() throws SQLException {
         return estilistaRepository.findAllEstilistas();
     }
 
-    public List<Estilista> findEstilistaServicio(int idServicio, Cita fecha)throws SQLException{
+    public EstilistaDTO findEstilistaById(int id) throws SQLException {
+        // Devuelve null si no se encuentra, el controlador gestiona el 404.
+        return estilistaRepository.findEstilistaById(id);
+    }
+
+    public List<Estilista> findEstilistaServicio(int idServicio, Cita fecha) throws SQLException {
         return estilistaRepository.findEstilistasServicios(idServicio, fecha);
     }
 
-    public EstilistaDTO findEstilistaById(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID del estilista debe ser mayor a cero");
-        }
-
-        EstilistaDTO estilista = estilistaRepository.findEstilistaById(id);
-        if (estilista == null) {
-            throw new NoSuchElementException("No se encontró el estilista con el ID especificado");
-        }
-        return estilista;
-    }
-
     public List<Horario> findHorarios(int idEstilista) throws SQLException {
-        if (idEstilista <= 0) {
-            throw new IllegalArgumentException("El ID del estilista debe ser mayor a cero");
-        }
-
-        List<Horario> horarios = estilistaRepository.findHorarios(idEstilista);
-        if (horarios.isEmpty()) {
-            throw new NoSuchElementException("El estilista no tiene horarios asignados");
-        }
-
-        return horarios;
+        // Simplemente devuelve la lista, vacía si no hay resultados.
+        return estilistaRepository.findHorarios(idEstilista);
     }
 
     public List<Servicio> findServicios(int idEstilista) throws SQLException {
-        if (idEstilista <= 0) {
-            throw new IllegalArgumentException("El ID del estilista debe ser mayor a cero");
-        }
-
-        List<Servicio> servicios = estilistaRepository.findServicios(idEstilista);
-        if (servicios.isEmpty()) {
-            throw new NoSuchElementException("El estilista no tiene servicios asignados");
-        }
-
-        return servicios;
+        // Simplemente devuelve la lista, vacía si no hay resultados.
+        return estilistaRepository.findServicios(idEstilista);
     }
 
-    public void saveHorario(Estilista estilista) throws SQLException {
-        if (estilista.getIdEmpleado() <= 0) {
-            throw new IllegalArgumentException("El ID del estilista debe ser mayor a cero");
+    public void saveHorario(Estilista estilista) throws SQLException, IllegalArgumentException {
+        if (estilista.getIdEmpleado() <= 0 || estilista.getIdHorario() <= 0) {
+            throw new IllegalArgumentException("Los IDs de estilista y horario son obligatorios.");
         }
-        if (estilista.getIdHorario() <= 0) {
-            throw new IllegalArgumentException("El ID del horario debe ser mayor a cero");
-        }
-
-        // Evitar asignación duplicada
+        // La lógica para evitar duplicados es una buena práctica de negocio.
         List<Horario> horariosExistentes = estilistaRepository.findHorarios(estilista.getIdEmpleado());
         boolean yaAsignado = horariosExistentes.stream()
                 .anyMatch(h -> h.getIdHorario() == estilista.getIdHorario());
@@ -80,19 +52,14 @@ public class EstilistaService {
         if (yaAsignado) {
             throw new IllegalArgumentException("El horario ya está asignado a este estilista");
         }
-
         estilistaRepository.saveHorarios(estilista);
     }
 
-    public void saveServicio(Estilista estilista) throws SQLException {
-        if (estilista.getIdEmpleado() <= 0) {
-            throw new IllegalArgumentException("El ID del estilista debe ser mayor a cero");
+    public void saveServicio(Estilista estilista) throws SQLException, IllegalArgumentException {
+        if (estilista.getIdEmpleado() <= 0 || estilista.getIdServicio() <= 0) {
+            throw new IllegalArgumentException("Los IDs de estilista y servicio son obligatorios.");
         }
-        if (estilista.getIdServicio() <= 0) {
-            throw new IllegalArgumentException("El ID del servicio debe ser mayor a cero");
-        }
-
-        // Evitar asignación duplicada
+        // La lógica para evitar duplicados es una buena práctica de negocio.
         List<Servicio> serviciosExistentes = estilistaRepository.findServicios(estilista.getIdEmpleado());
         boolean yaAsignado = serviciosExistentes.stream()
                 .anyMatch(s -> s.getIdServicio() == estilista.getIdServicio());
@@ -100,8 +67,6 @@ public class EstilistaService {
         if (yaAsignado) {
             throw new IllegalArgumentException("El servicio ya está asignado a este estilista");
         }
-
         estilistaRepository.saveServicios(estilista);
     }
 }
-

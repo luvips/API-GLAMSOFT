@@ -1,22 +1,20 @@
 package org.pi.Routers;
+
 import io.javalin.Javalin;
+import org.pi.Config.IRouter;
 import org.pi.Controllers.EstilistaController;
 
-public class EstilistaRouter {
+public class EstilistaRouter implements IRouter {
     private final EstilistaController estilistaController;
 
-    public EstilistaRouter(EstilistaController estilistaController) {
-        this.estilistaController = estilistaController;
+    public EstilistaRouter(EstilistaController controller) {
+        this.estilistaController = controller;
     }
 
-    public void register(Javalin app){
-        app.get("/estilistas",estilistaController::findAll);
-        app.get("/estilistas/{id}",estilistaController::findById);
-        app.get("/estilistas/{id}/horarios",estilistaController::findHorarios);
-        app.get("/estilistas/{id}/servicios",estilistaController::findServicios);
-        app.post("/estilistas/horarios",estilistaController::saveHorario);
-        app.post("/estilistas/servicios",estilistaController::saveServicios);
-        app.get("/estilistas/servicios/{id}",estilistaController::fidnEstilistaServicio);
-
+    @Override
+    public void register(Javalin app) {
+        app.get("/api/estilistas", estilistaController::getAll);
+        app.get("/api/estilistas/{id}", estilistaController::getById);
+        app.post("/api/estilistas/servicio/{idServicio}", estilistaController::findEstilistaServicio);
     }
 }

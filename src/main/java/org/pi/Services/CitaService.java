@@ -4,113 +4,106 @@ import org.pi.Models.Cita;
 import org.pi.Repositories.CitaRepository;
 import org.pi.dto.CitaDTO;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class CitaService {
+
     private final CitaRepository citaRepository;
+    private final List<String> ESTADOS_VALIDOS = Arrays.asList("PENDIENTE", "CONFIRMADA", "CANCELADA", "COMPLETADA");
 
     public CitaService(CitaRepository citaRepository) {
         this.citaRepository = citaRepository;
     }
 
-    public List<CitaDTO> citasPorMes(int mes, int anio) throws SQLException {
+    public List<CitaDTO> findAll() throws SQLException {
+        return citaRepository.findAllCitas();
+    }
+
+    public CitaDTO findById(int id) throws SQLException {
+        return citaRepository.findCitaById(id);
+    }
+
+    public List<CitaDTO> findByCliente(int idCliente) throws SQLException {
+        return citaRepository.findCitaCliente(idCliente);
+    }
+
+    public List<CitaDTO> findByEstilista(int idEstilista) throws SQLException {
+        return citaRepository.findByEstilista(idEstilista);
+    }
+
+    public List<CitaDTO> findByEstado(String estado) throws SQLException, IllegalArgumentException {
+        if (estado == null || !ESTADOS_VALIDOS.contains(estado.toUpperCase())) {
+            throw new IllegalArgumentException("Estado de cita no válido. Los estados permitidos son: " + String.join(", ", ESTADOS_VALIDOS));
+        }
+        return citaRepository.findByEstado(estado.toUpperCase());
+    }
+
+    public List<CitaDTO> findCitasMes(int mes, int anio) throws SQLException, IllegalArgumentException {
+        if (mes < 1 || mes > 12) {
+            throw new IllegalArgumentException("El mes debe estar entre 1 y 12.");
+        }
+        if (anio < 2020 || anio > 2100) {
+            throw new IllegalArgumentException("El año no es válido.");
+        }
         return citaRepository.findCitasMes(mes, anio);
     }
 
-    public List<CitaDTO> citasPorSemana(int anio, int semana) throws SQLException {
-        return citaRepository.findCitasSemana(anio, semana);
-    }
-
-    public List<CitaDTO> citasPorDia(LocalDate fecha) throws SQLException {
-        return citaRepository.findCitasDia(fecha);
-    }
-
-    public List<CitaDTO> findAllCitas() throws SQLException{
-        return citaRepository.findAllCitas();
-    }
-    public List<CitaDTO> historialClienteCitas(int idCliente) throws SQLException{
-        return citaRepository.findCitaCliente(idCliente);
-    }
-    public CitaDTO findCita(int id) throws SQLException{
-        if (id <= 0){
-            throw new IllegalArgumentException("La id debe ser mayor a cero");
+    public int create(Cita cita) throws SQLException, IllegalArgumentException {
+        if (cita.getFechaCita() == null || cita.getFechaCita().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("La fecha de la cita no puede ser en el pasado.");
         }
-        CitaDTO cita = citaRepository.findCitaById(id);
-        if (cita == null){
-            throw new NoSuchElementException("La cita no existe");
-        }
-        return cita;
-    }
-
-    public int saveCita(Cita cita)throws Exception{
-        LocalDateTime fechaSolicitud = cita.getFechaSolicitudCita();
-        LocalDateTime fechaCita = cita.getFechaCita();
-        List<Integer> servicioIds = cita.getServicios();
-        //validar fecha
-        if (!fechaCita.isAfter(fechaSolicitud)) {
-            throw new Exception("La fecha de la cita debe ser despues de la fecha de solicitud.");
-        }
-
-        long diferenciaMinutos = Duration.between(fechaSolicitud, fechaCita).toMinutes();
-
-        if (diferenciaMinutos < 30) {
-            throw new Exception("La reserva de la cita debe hacerce con media hora de anticipacion");
+        if (cita.getIdCliente() <= 0 || cita.getIdEstilista() <= 0 || cita.getIdHorario() <= 0) {
+            throw new IllegalArgumentException("Los IDs de cliente, estilista y horario son obligatorios y deben ser mayores a 0.");
         }
         if (cita.getServicios() == null || cita.getServicios().isEmpty()) {
             throw new IllegalArgumentException("La cita debe tener al menos un servicio asociado.");
         }
-        int duracionTotalMinutos = citaRepository.calcularDuracionTotal(servicioIds);
-        LocalDateTime horaFinCita = fechaCita.plusMinutes(duracionTotalMinutos);
 
-        //evitar citas sobrepuesta
-        if (citaRepository.existeTraslape(cita.getIdEstilista(), fechaCita, horaFinCita)) {
-            throw new IllegalStateException("El estilista no está disponible en el horario seleccionado (Traslape).");
-        }
+        cita.setEstadoCita("PENDIENTE");
+        cita.setFechaSolicitudCita(LocalDateTime.now());
 
-        if (cita.getEstadoCita() == null || cita.getEstadoCita().trim().isEmpty()) {
-            cita.setEstadoCita("PENDIENTE");
-        }
         return citaRepository.save(cita);
     }
 
-    public void deleteCita(int id) throws SQLException{
-        if (id <= 0){
-            throw new IllegalArgumentException("La id debe ser mayor a cero");
+    public boolean update(int id, Cita cita) throws SQLException, IllegalArgumentException {
+        CitaDTO citaExistente = findById(id);
+        if (citaExistente == null) {
+            return false; // Indica que no se encontró para que el controlador devuelva 404
         }
-        CitaDTO cita = citaRepository.findCitaById(id);
-        if (cita == null){
-            throw new NoSuchElementException("No se puede eliminar la cita no existe");
+
+        if (cita.getFechaCita() == null || cita.getFechaCita().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("La fecha de la cita no puede ser en el pasado.");
         }
-        citaRepository.delete(id);
+        if (cita.getIdEstilista() <= 0 || cita.getIdHorario() <= 0) {
+            throw new IllegalArgumentException("Los IDs de estilista y horario son obligatorios.");
+        }
+
+        cita.setIdCita(id);
+        return citaRepository.update(cita);
     }
 
-    public void StatusCita(Cita cita) throws SQLException{
-        if (cita.getIdCita() <= 0){
-            throw new IllegalArgumentException("La id debe ser mayor a cero");
+    public boolean updateEstado(int id, String estado) throws SQLException, IllegalArgumentException {
+        CitaDTO citaExistente = findById(id);
+        if (citaExistente == null) {
+            return false; // Indica que no se encontró
         }
-        if (!cita.getEstadoCita().equalsIgnoreCase("FINALIZADA")){
-            citaRepository.updateStatus(cita);
+
+        String upperCaseEstado = estado.toUpperCase();
+        if (!ESTADOS_VALIDOS.contains(upperCaseEstado)) {
+            throw new IllegalArgumentException("Estado de cita no válido. Los estados permitidos son: " + String.join(", ", ESTADOS_VALIDOS));
         }
+
+        return citaRepository.updateEstado(id, upperCaseEstado);
     }
 
-    public void fechaCita(Cita cita)throws Exception{
-        if (cita.getIdCita() <= 0){
-            throw new IllegalArgumentException("La id debe ser mayor a cero");
+    public boolean delete(int id) throws SQLException {
+        CitaDTO citaExistente = findById(id);
+        if (citaExistente == null) {
+            return false; // Indica que no se encontró
         }
-        if (cita.getEstadoCita().equalsIgnoreCase("CANCELADA") || cita.getEstadoCita().equalsIgnoreCase("CONFIRMADA")){
-            LocalDateTime fechaSolicitud = cita.getFechaSolicitudCita();
-            LocalDateTime fechaCita = cita.getFechaCita();
-            if (!fechaCita.isAfter(fechaSolicitud)) {
-                throw new Exception("La fecha de la cita debe ser despues de la fecha de solicitud.");
-            }
-            //falta logica para evitar citas sobrePuestas
-            citaRepository.updateFecha(cita);
-        }
-
+        return citaRepository.delete(id);
     }
 }

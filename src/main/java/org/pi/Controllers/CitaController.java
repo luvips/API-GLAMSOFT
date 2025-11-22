@@ -1,146 +1,232 @@
 package org.pi.Controllers;
+
 import io.javalin.http.Context;
-import org.pi.Models.Categoria;
 import org.pi.Models.Cita;
 import org.pi.Services.CitaService;
 import org.pi.dto.CitaDTO;
 
 import java.sql.SQLException;
-import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class CitaController {
+
     private final CitaService citaService;
 
     public CitaController(CitaService citaService) {
         this.citaService = citaService;
     }
 
-    public void getCitasPorMes(Context ctx) {
-        try{
-            int mes = Integer.parseInt(ctx.queryParam("mes"));
-            int anio = Integer.parseInt(ctx.queryParam("anio"));
-
-            ctx.json(citaService.citasPorMes(mes, anio));
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void getHistorialCliente(Context ctx) {
-        try{
-            int idCliente = Integer.parseInt(ctx.queryParam("idCliente"));
-
-            ctx.json(citaService.historialClienteCitas(idCliente));
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public void getCitasPorSemana(Context ctx) {
-        try{
-            int anio = Integer.parseInt(ctx.queryParam("anio"));
-            int semana = Integer.parseInt(ctx.queryParam("semana"));
-
-            ctx.json(citaService.citasPorSemana(anio, semana));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void getCitasPorDia(Context ctx) {
-        try{
-            LocalDate fecha = LocalDate.parse(ctx.queryParam("fecha"));
-            ctx.json(citaService.citasPorDia(fecha));
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void findALL(Context ctx){
+    public void getAll(Context ctx) {
         try {
-            List<CitaDTO> citas = citaService.findAllCitas();
-            if (citas == null || citas.isEmpty()){
-                ctx.status(204).result("No se encontraron elementos");
-            }else {
-            ctx.json(citas);
-            ctx.status(200);
+            String estado = ctx.queryParam("estado");
+            List<CitaDTO> citas;
+
+            if (estado != null && !estado.isEmpty()) {
+                citas = citaService.findByEstado(estado);
+            } else {
+                citas = citaService.findAll();
             }
-        }catch (Exception e){
-            ctx.status(500).result("Error del sistema");
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", citas);
+            response.put("message", "Citas recuperadas correctamente");
+            ctx.status(200).json(response);
+
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error en la base de datos: " + e.getMessage());
         }
     }
 
-    public void findCita(Context ctx){
-        try{
-            int id = Integer.parseInt(ctx.pathParam("id"));
-            CitaDTO cita= citaService.findCita(id);
-            if (cita == null){
-                ctx.status(204).result("No se encontro el elemento");
-            }else {
-            ctx.json(cita);
-            ctx.status(200);
-            }
-        }catch (SQLException e){
-            ctx.status(500).result("Error del sistema");
-        }catch (NumberFormatException en){
-            ctx.status(400).result("El id debe ser un numero entero");
-        }
-    }
-
-    public void saveCita(Context ctx){
-        try{
-            Cita cita = ctx.bodyAsClass(Cita.class);
-            if (cita != null && cita.getFechaCita() != null){
-                int idGenerado =   citaService.saveCita(cita);
-                ctx.status(201).json(Map.of(
-                        "success", true,
-                        "id_categoria", idGenerado
-                ));
-            }
-
-        }catch (Exception e){
-            ctx.status(400).result("El recurso no se puede crear");
-        }
-    }
-
-    public void deleteCita(Context ctx){
+    public void getById(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            citaService.deleteCita(id);
-            ctx.status(204).result("Se elimino el recurso con exito");
+            CitaDTO cita = citaService.findById(id);
+
+            if (cita == null) {
+                errorResponse(ctx, 404, "Cita no encontrada");
+                return;
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", cita);
+            response.put("message", "Cita encontrada");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
         } catch (SQLException e) {
-            ctx.status(404).result("No se encontro el elemento");
-        }catch (NumberFormatException en){
-            ctx.status(400).result("El id debe ser un numero entero");
+            errorResponse(ctx, 500, "Error en la base de datos: " + e.getMessage());
         }
     }
 
-    public void statusCita(Context ctx){
-        try{
-            Cita cita = ctx.bodyAsClass(Cita.class);
-            if (cita.getEstadoCita() == null || cita.getFechaCita() == null){
-                ctx.status(400).result("faltan datos necesarios para actualizar la cita");
-            }else {
-                citaService.StatusCita(cita);
-                ctx.status(204).result("Se actualizo el recurso con exito");
-            }
+    public void getByCliente(Context ctx) {
+        try {
+            int idCliente = Integer.parseInt(ctx.pathParam("idCliente"));
+            List<CitaDTO> citas = citaService.findByCliente(idCliente);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", citas);
+            response.put("message", "Citas del cliente recuperadas correctamente");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID del cliente debe ser un número válido");
         } catch (SQLException e) {
-            ctx.status(404).result("No se encontro el elemento");
+            errorResponse(ctx, 500, "Error en la base de datos: " + e.getMessage());
         }
     }
 
-    public void fechaCita(Context ctx){
-        try{
-            Cita cita = ctx.bodyAsClass(Cita.class);
-            if (cita.getEstadoCita() == null || cita.getFechaCita() == null){
-                ctx.status(400).result("faltan datos necesarios para actualizar la cita");
-            }else {
-                citaService.fechaCita(cita);
-                ctx.status(204).result("Se actualizo el recurso con exito");
+    public void getByEstilista(Context ctx) {
+        try {
+            int idEstilista = Integer.parseInt(ctx.pathParam("idEstilista"));
+            List<CitaDTO> citas = citaService.findByEstilista(idEstilista);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", citas);
+            response.put("message", "Citas del estilista recuperadas correctamente");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID del estilista debe ser un número válido");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error en la base de datos: " + e.getMessage());
+        }
+    }
+
+    public void getByMonth(Context ctx) {
+        try {
+            int mes = Integer.parseInt(ctx.pathParam("mes"));
+            int year = Integer.parseInt(ctx.pathParam("year"));
+            List<CitaDTO> citas = citaService.findCitasMes(mes, year);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", citas);
+            response.put("message", "Citas del mes recuperadas correctamente");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El mes y el año deben ser números válidos");
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error en la base de datos: " + e.getMessage());
+        }
+    }
+
+    public void create(Context ctx) {
+        try {
+            Cita nuevaCita = ctx.bodyAsClass(Cita.class);
+            int idGenerado = citaService.create(nuevaCita);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", idGenerado);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "Cita creada exitosamente");
+            ctx.status(201).json(response);
+
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
+        } catch (Exception e) { // Captura más amplia para problemas de deserialización
+            errorResponse(ctx, 500, "Error al procesar la solicitud: " + e.getMessage());
+        }
+    }
+
+    public void update(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            Cita citaActualizada = ctx.bodyAsClass(Cita.class);
+
+            boolean actualizado = citaService.update(id, citaActualizada);
+
+            if (!actualizado) {
+                errorResponse(ctx, 404, "Cita no encontrada para actualizar");
+                return;
             }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Cita actualizada correctamente");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
         } catch (Exception e) {
-            ctx.status(404).result("No se encontro el elemento");
+            errorResponse(ctx, 500, "Error al procesar la solicitud: " + e.getMessage());
         }
+    }
+
+    public void updateStatus(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            Map<String, String> requestBody = ctx.bodyAsClass(Map.class);
+            String nuevoEstado = requestBody.get("estado");
+
+            if (nuevoEstado == null || nuevoEstado.trim().isEmpty()) {
+                errorResponse(ctx, 400, "El campo 'estado' es obligatorio en el cuerpo de la solicitud");
+                return;
+            }
+
+            boolean actualizado = citaService.updateEstado(id, nuevoEstado);
+
+            if (!actualizado) {
+                errorResponse(ctx, 404, "Cita no encontrada para actualizar estado");
+                return;
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Estado de la cita actualizado correctamente");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 500, "Error al procesar la solicitud: " + e.getMessage());
+        }
+    }
+
+    public void delete(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            boolean eliminado = citaService.delete(id);
+
+            if (!eliminado) {
+                errorResponse(ctx, 404, "Cita no encontrada para eliminar");
+                return;
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Cita eliminada correctamente");
+            ctx.status(200).json(response);
+
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error en la base de datos: " + e.getMessage());
+        }
+    }
+
+    private void errorResponse(Context ctx, int statusCode, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", message);
+        ctx.status(statusCode).json(response);
     }
 }

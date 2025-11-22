@@ -1,11 +1,9 @@
 package org.pi.Services;
 
-
 import org.pi.Models.Horario;
 import org.pi.Repositories.HorarioRepository;
 
 import java.sql.SQLException;
-import java.time.LocalTime;
 import java.util.List;
 
 public class HorarioService {
@@ -20,46 +18,21 @@ public class HorarioService {
         return horarioRepository.findAll();
     }
 
+    public Horario findById(int id) throws SQLException {
+        return horarioRepository.findById(id);
+    }
 
     public int save(Horario horario) throws SQLException {
-        // Validaciones
-        if (horario.getHoraInicio() == null || horario.getHoraFin() == null) {
-            throw new IllegalArgumentException("Las horas de inicio y fin no pueden ser nulas.");
-        }
-        if (horario.getHoraFin().isBefore(horario.getHoraInicio())) {
-            throw new IllegalArgumentException("La hora de fin no puede ser anterior a la de inicio.");
-        }
-        if (horario.getDiaSemana() == null || horario.getDiaSemana().isBlank()) {
-            throw new IllegalArgumentException("El día de la semana es obligatorio.");
-        }
-
+        // Las validaciones de datos de entrada se manejan en el controlador.
         return horarioRepository.save(horario);
     }
 
-
-    public void delete(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID debe ser mayor a cero.");
-        }
-        horarioRepository.delete(id);
+    public boolean update(Horario horario) throws SQLException {
+        // El ID ya viene en el objeto desde el controlador
+        return horarioRepository.update(horario);
     }
 
-
-    public void update(Horario horario) throws SQLException {
-        if (horario.getIdHorario() <= 0) {
-            throw new IllegalArgumentException("El ID del horario es inválido.");
-        }
-        if (horario.getHoraInicio() == null || horario.getHoraFin() == null) {
-            throw new IllegalArgumentException("Las horas de inicio y fin no pueden ser nulas.");
-        }
-        if (horario.getHoraFin().isBefore(horario.getHoraInicio())) {
-            throw new IllegalArgumentException("La hora de fin no puede ser anterior a la de inicio.");
-        }
-        if (horario.getDiaSemana() == null || horario.getDiaSemana().isBlank()) {
-            throw new IllegalArgumentException("El día de la semana es obligatorio.");
-        }
-
-        horarioRepository.update(horario);
+    public boolean delete(int id) throws SQLException {
+        return horarioRepository.delete(id);
     }
 }
-

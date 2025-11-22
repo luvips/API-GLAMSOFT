@@ -1,22 +1,22 @@
 package org.pi.Routers;
 
 import io.javalin.Javalin;
+import org.pi.Config.IRouter;
 import org.pi.Controllers.ServicioController;
 
-public class ServicioRouter {
+public class ServicioRouter implements IRouter {
     private final ServicioController servicioController;
 
-    public ServicioRouter(ServicioController servicioController) {
-        this.servicioController = servicioController;
+    public ServicioRouter(ServicioController controller) {
+        this.servicioController = controller;
     }
 
-    public void register(Javalin app){
-        app.get("/servicios",servicioController::findAll);
-        app.get("/servicios/categorias/{id}",servicioController::findByCategoria);
-        app.get("/servicios/nombres",servicioController::findNombresServicios);
-        app.get("/servicios/{id}",servicioController::findById);
-        app.post("/servicios",servicioController::saveServicio);
-        app.delete("/servicios/{id}",servicioController::deleteServicio);
-        app.patch("/servicios",servicioController::updateServicio);
+    @Override
+    public void register(Javalin app) {
+        app.get("/api/servicios", servicioController::getAll);
+        app.post("/api/servicios", servicioController::create);
+        app.get("/api/servicios/{id}", servicioController::getById);
+        app.put("/api/servicios/{id}", servicioController::update);
+        app.delete("/api/servicios/{id}", servicioController::delete);
     }
 }

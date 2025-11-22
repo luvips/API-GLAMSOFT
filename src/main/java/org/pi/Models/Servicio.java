@@ -8,7 +8,7 @@ public class Servicio {
     private double precio;
     private String descripcion;
     private int idCategoria;
-    private int idFormulario;
+    private Integer idFormulario; // Cambiado a Integer para permitir nulos
 
     public Servicio() {
     }
@@ -26,7 +26,7 @@ public class Servicio {
     }
 
     public Servicio(int idServicio, String imagenURL,
-                    String nombreServicio, int duracionMinutos, double precio, String descripcion, int idCategoria, int idFormulario) {
+                    String nombreServicio, int duracionMinutos, double precio, String descripcion, int idCategoria, Integer idFormulario) {
         this.idServicio = idServicio;
         this.imagenURL = imagenURL;
         this.nombreServicio = nombreServicio;
@@ -105,11 +105,11 @@ public class Servicio {
         this.idCategoria = idCategoria;
     }
 
-    public int getIdFormulario() {
+    public Integer getIdFormulario() {
         return idFormulario;
     }
 
-    public void setIdFormulario(int idFormulario) {
+    public void setIdFormulario(Integer idFormulario) {
         this.idFormulario = idFormulario;
     }
 }
