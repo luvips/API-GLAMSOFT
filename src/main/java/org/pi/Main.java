@@ -4,7 +4,9 @@ import io.javalin.Javalin;
 import io.javalin.http.NotFoundResponse;
 import org.pi.Config.DBconfig;
 import org.pi.Config.configModule;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.javalin.json.JavalinJackson;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,10 +18,11 @@ public class Main {
             DBconfig.getDataSource();
 
             Javalin app = Javalin.create(config -> {
+                config.jsonMapper(new JavalinJackson().updateMapper(mapper -> {
+                    mapper.registerModule(new JavaTimeModule());
+                }));
                 config.bundledPlugins.enableCors(cors -> cors.addRule(it -> {
-                    // CORRECCIÓN: No se puede usar anyHost() con credenciales.
-                    // reflectClientOrigin refleja el origen del cliente, lo que es seguro
-                    // y permite el uso de credenciales.
+
                     it.reflectClientOrigin = true;
                     it.allowCredentials = true;
                 }));
