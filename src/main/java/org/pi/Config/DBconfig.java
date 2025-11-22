@@ -10,12 +10,12 @@ public class DBconfig {
 
     public static DataSource getDataSource() {
         if (dataSource == null) {
-            String host = "localhost";
+            String host = "54.208.236.160";
             String port = "3306";
-            String user = "root";
+            String user = "Glam1";
             String dbName = "glamsoft";
-            String username = "root";
-            String password = "regi12345.";
+            String username = "Glam1";
+            String password = "Glamsoft123*";
             String url = "jdbc:mysql://" + host + ":" + port + "/" + dbName;
 
             HikariConfig conf = new HikariConfig();

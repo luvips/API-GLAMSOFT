@@ -1,9 +1,13 @@
 package org.pi;
 import io.javalin.Javalin;
+import org.pi.Config.DBconfig;
 import org.pi.Config.configModule;
 public class Main {
    
     public static void main(String[] args) {
+
+        DBconfig.getDataSource();
+
         Javalin app = Javalin.create(config -> {
 
             config.bundledPlugins.enableCors(cors -> {
