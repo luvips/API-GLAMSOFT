@@ -1,9 +1,6 @@
 package org.pi.Services;
 
-import org.pi.Models.Cita;
 import org.pi.Models.Estilista;
-import org.pi.Models.Horario;
-import org.pi.Models.Servicio;
 import org.pi.Repositories.EstilistaRepository;
 import org.pi.dto.EstilistaDTO;
 
@@ -17,25 +14,15 @@ public class EstilistaService {
         this.estilistaRepository = estilistaRepository;
     }
 
-    // --- MÉTODOS DE LECTURA ---
-
-    public List<EstilistaDTO> findAllEstilistas() throws SQLException {
-        return estilistaRepository.findAllEstilistas();
+    public List<EstilistaDTO> findAll() throws SQLException {
+        return estilistaRepository.findAll();
     }
 
-    public EstilistaDTO findEstilistaById(int id) throws SQLException {
-        return estilistaRepository.findEstilistaById(id);
+    public EstilistaDTO findById(int id) throws SQLException {
+        return estilistaRepository.findById(id);
     }
-
-    public List<Estilista> findEstilistaServicio(int idServicio, Cita fecha) throws SQLException {
-        // Lógica existente...
-        return null; // Placeholder
-    }
-
-    // --- MÉTODOS CRUD ---
 
     public Estilista create(Estilista estilista) throws SQLException {
-        // Las validaciones de datos se hacen en el controlador
         return estilistaRepository.save(estilista);
     }
 
@@ -44,27 +31,15 @@ public class EstilistaService {
         return estilistaRepository.update(estilista);
     }
 
-    public boolean delete(int id) throws SQLException {
+    public boolean delete(int id) throws SQLException, IllegalStateException {
+        // Regla de negocio: No eliminar si tiene citas pendientes o confirmadas.
+        if (estilistaRepository.hasCitas(id)) {
+            throw new IllegalStateException("No se puede eliminar el estilista porque tiene citas activas.");
+        }
         return estilistaRepository.delete(id);
     }
 
-    // --- MÉTODOS DE RELACIONES ---
-    
-    public List<Horario> findHorarios(int idEstilista) throws SQLException {
-        // Lógica existente...
-        return null; // Placeholder
-    }
-
-    public List<Servicio> findServicios(int idEstilista) throws SQLException {
-        // Lógica existente...
-        return null; // Placeholder
-    }
-
-    public void saveHorario(Estilista estilista) throws SQLException, IllegalArgumentException {
-        // Lógica existente...
-    }
-
-    public void saveServicio(Estilista estilista) throws SQLException, IllegalArgumentException {
-        // Lógica existente...
+    public List<EstilistaDTO> findEstilistasByServicio(int idServicio) throws SQLException {
+        return estilistaRepository.findEstilistasByServicio(idServicio);
     }
 }

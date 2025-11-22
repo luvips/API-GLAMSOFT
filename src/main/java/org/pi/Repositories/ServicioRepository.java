@@ -2,6 +2,7 @@ package org.pi.Repositories;
 
 import org.pi.Config.DBconfig;
 import org.pi.Models.Servicio;
+import org.pi.dto.ServicioDTO;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -9,106 +10,129 @@ import java.util.List;
 
 public class ServicioRepository {
 
-    public List<Servicio> findAll() throws SQLException {
-        List<Servicio> servicios = new ArrayList<>();
-        String sql = "SELECT * FROM servicio";
+    private ServicioDTO mapResultSetToServicioDTO(ResultSet rs) throws SQLException {
+        ServicioDTO dto = new ServicioDTO();
+        dto.setIdServicio(rs.getInt("id_servicio"));
+        dto.setNombre(rs.getString("nombre_servicio"));
+        dto.setDescripcion(rs.getString("descripcion"));
+        dto.setPrecio(rs.getDouble("precio"));
+        dto.setDuracion(rs.getInt("duracion_minutos"));
+        dto.setActivo(rs.getBoolean("activo"));
+        
+        // Estos campos pueden no estar en todas las consultas
+        if (hasColumn(rs, "nombre_categoria")) {
+            dto.setCategoria(rs.getString("nombre_categoria"));
+        }
+        if (hasColumn(rs, "valoracion_promedio")) {
+            dto.setValoracionPromedio(rs.getDouble("valoracion_promedio"));
+        }
+        if (hasColumn(rs, "total_valoraciones")) {
+            dto.setTotalValoraciones(rs.getInt("total_valoraciones"));
+        }
+        return dto;
+    }
+
+    public List<ServicioDTO> findAll(String categoria, Boolean activo) throws SQLException {
+        List<ServicioDTO> servicios = new ArrayList<>();
+        
+        StringBuilder sql = new StringBuilder(
+            "SELECT s.*, c.nombre_categoria " +
+            "FROM servicio s " +
+            "JOIN categoria c ON s.id_categoria = c.id_categoria " +
+            "WHERE 1=1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+        if (categoria != null && !categoria.isEmpty()) {
+            sql.append("AND c.nombre_categoria = ? ");
+            params.add(categoria);
+        }
+        if (activo != null) {
+            sql.append("AND s.activo = ? ");
+            params.add(activo);
+        }
+
         try (Connection conn = DBconfig.getDataSource().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                servicios.add(mapResultSetToServicio(rs));
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < params.size(); i++) {
+                stmt.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    servicios.add(mapResultSetToServicioDTO(rs));
+                }
             }
         }
         return servicios;
     }
 
-    public Servicio findById(int id) throws SQLException {
-        Servicio servicio = null;
-        String sql = "SELECT * FROM servicio WHERE id_servicio = ?";
+    public ServicioDTO findById(int id) throws SQLException {
+        String sql = "SELECT s.*, c.nombre_categoria, " +
+                     "COALESCE(AVG(v.puntuacion), 0) AS valoracion_promedio, " +
+                     "COUNT(v.id_valoracion) AS total_valoraciones " +
+                     "FROM servicio s " +
+                     "JOIN categoria c ON s.id_categoria = c.id_categoria " +
+                     "LEFT JOIN valoracion v ON s.id_servicio = v.id_servicio " +
+                     "WHERE s.id_servicio = ? AND s.activo = TRUE " +
+                     "GROUP BY s.id_servicio, c.nombre_categoria";
+
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    servicio = mapResultSetToServicio(rs);
+                    return mapResultSetToServicioDTO(rs);
                 }
             }
         }
-        return servicio;
+        return null;
     }
 
-    public List<Servicio> findByCategoria(int idCategoria) throws SQLException {
-        List<Servicio> servicios = new ArrayList<>();
-        String sql = "SELECT * FROM servicio WHERE id_categoria = ?";
-        try (Connection conn = DBconfig.getDataSource().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, idCategoria);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    servicios.add(mapResultSetToServicio(rs));
-                }
-            }
-        }
-        return servicios;
-    }
-
-    public int save(Servicio servicio) throws SQLException {
-        String sql = "INSERT INTO servicio(imagen, nombre_servicio, duracion_minutos, precio, descripcion, id_categoria, id_formulario) VALUES(?, ?, ?, ?, ?, ?, ?)";
+    public Servicio save(Servicio servicio) throws SQLException {
+        String sql = "INSERT INTO servicio(nombre_servicio, descripcion, precio, duracion_minutos, id_categoria, activo, imagen) VALUES(?,?,?,?,?,?,?)";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
-            stmt.setString(1, servicio.getImagenURL());
-            stmt.setString(2, servicio.getNombreServicio());
-            stmt.setInt(3, servicio.getDuracionMinutos());
-            stmt.setDouble(4, servicio.getPrecio());
-            stmt.setString(5, servicio.getDescripcion());
-            stmt.setInt(6, servicio.getIdCategoria());
+            stmt.setString(1, servicio.getNombreServicio());
+            stmt.setString(2, servicio.getDescripcion());
+            stmt.setDouble(3, servicio.getPrecio());
+            stmt.setInt(4, servicio.getDuracionMinutos());
+            stmt.setInt(5, servicio.getIdCategoria());
+            stmt.setBoolean(6, servicio.isActivo());
+            stmt.setString(7, servicio.getImagenURL());
 
-            if (servicio.getIdFormulario() == null) { // Condición corregida
-                stmt.setNull(7, Types.INTEGER);
-            } else {
-                stmt.setInt(7, servicio.getIdFormulario());
-            }
-
-            int filasAfectadas = stmt.executeUpdate();
-            if (filasAfectadas == 0) {
-                throw new SQLException("La inserción de servicio falló, ninguna fila afectada.");
-            }
-            try (ResultSet claves = stmt.getGeneratedKeys()) {
-                if (claves.next()) {
-                    return claves.getInt(1);
-                } else {
-                    throw new SQLException("No se encontró id generado para servicio.");
+            if (stmt.executeUpdate() > 0) {
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        servicio.setIdServicio(rs.getInt(1));
+                        return servicio;
+                    }
                 }
             }
+            throw new SQLException("No se pudo guardar el servicio.");
         }
     }
 
     public boolean update(Servicio servicio) throws SQLException {
-        String sql = "UPDATE servicio SET imagen = ?, nombre_servicio = ?, duracion_minutos = ?, precio = ?, descripcion = ?, id_categoria = ?, id_formulario = ? WHERE id_servicio = ?";
+        String sql = "UPDATE servicio SET nombre_servicio = ?, descripcion = ?, precio = ?, duracion_minutos = ?, id_categoria = ?, activo = ?, imagen = ? WHERE id_servicio = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, servicio.getImagenURL());
-            stmt.setString(2, servicio.getNombreServicio());
-            stmt.setInt(3, servicio.getDuracionMinutos());
-            stmt.setDouble(4, servicio.getPrecio());
-            stmt.setString(5, servicio.getDescripcion());
-            stmt.setInt(6, servicio.getIdCategoria());
-
-            if (servicio.getIdFormulario() == null) { // Condición corregida
-                stmt.setNull(7, Types.INTEGER);
-            } else {
-                stmt.setInt(7, servicio.getIdFormulario());
-            }
+            stmt.setString(1, servicio.getNombreServicio());
+            stmt.setString(2, servicio.getDescripcion());
+            stmt.setDouble(3, servicio.getPrecio());
+            stmt.setInt(4, servicio.getDuracionMinutos());
+            stmt.setInt(5, servicio.getIdCategoria());
+            stmt.setBoolean(6, servicio.isActivo());
+            stmt.setString(7, servicio.getImagenURL());
             stmt.setInt(8, servicio.getIdServicio());
-
             return stmt.executeUpdate() > 0;
         }
     }
 
-    public boolean delete(int id) throws SQLException {
-        String sql = "DELETE FROM servicio WHERE id_servicio = ?";
+    public boolean softDelete(int id) throws SQLException {
+        String sql = "UPDATE servicio SET activo = FALSE WHERE id_servicio = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
@@ -116,16 +140,14 @@ public class ServicioRepository {
         }
     }
 
-    private Servicio mapResultSetToServicio(ResultSet rs) throws SQLException {
-        int idServicio = rs.getInt("id_servicio");
-        String imagen = rs.getString("imagen");
-        String nombreServicio = rs.getString("nombre_servicio");
-        int duracionMinutos = rs.getInt("duracion_minutos");
-        double precio = rs.getDouble("precio");
-        String descripcion = rs.getString("descripcion");
-        int categoriaId = rs.getInt("id_categoria");
-        // Usar getObject para manejar posibles nulos de la DB de forma segura
-        Integer formularioId = (Integer) rs.getObject("id_formulario"); 
-        return new Servicio(idServicio, imagen, nombreServicio, duracionMinutos, precio, descripcion, categoriaId, formularioId);
+    private boolean hasColumn(ResultSet rs, String columnName) throws SQLException {
+        ResultSetMetaData rsmd = rs.getMetaData();
+        int columns = rsmd.getColumnCount();
+        for (int x = 1; x <= columns; x++) {
+            if (columnName.equalsIgnoreCase(rsmd.getColumnName(x))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

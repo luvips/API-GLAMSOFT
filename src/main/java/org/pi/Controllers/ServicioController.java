@@ -3,6 +3,7 @@ package org.pi.Controllers;
 import io.javalin.http.Context;
 import org.pi.Models.Servicio;
 import org.pi.Services.ServicioService;
+import org.pi.dto.ServicioDTO;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -18,27 +19,29 @@ public class ServicioController {
 
     public void getAll(Context ctx) {
         try {
-            List<Servicio> servicios = servicioService.findAllServicios();
-            successResponse(ctx, 200, "Servicios recuperados correctamente", servicios);
+            String categoria = ctx.queryParam("categoria");
+            Boolean activo = ctx.queryParamAsClass("activo", Boolean.class).getOrDefault(null);
+            
+            List<ServicioDTO> servicios = servicioService.findAll(categoria, activo);
+            successResponse(ctx, 200, "Servicios recuperados", servicios);
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al obtener servicios: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
     public void getById(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            Servicio servicio = servicioService.findById(id); // Corregido a findById
-
+            ServicioDTO servicio = servicioService.findById(id);
             if (servicio == null) {
-                errorResponse(ctx, 404, "Servicio no encontrado");
+                errorResponse(ctx, 404, "Servicio no encontrado.");
                 return;
             }
             successResponse(ctx, 200, "Servicio encontrado", servicio);
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "El ID del servicio debe ser un número válido");
+            errorResponse(ctx, 400, "ID de servicio inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al buscar el servicio: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
@@ -46,27 +49,22 @@ public class ServicioController {
         try {
             Servicio servicio = ctx.bodyAsClass(Servicio.class);
 
-            // Validaciones
-            if (servicio.getNombreServicio() == null || servicio.getNombreServicio().trim().isEmpty()) {
-                errorResponse(ctx, 400, "El nombre del servicio es obligatorio");
-                return;
-            }
-            if (servicio.getPrecio() <= 0) {
-                errorResponse(ctx, 400, "El precio debe ser mayor a 0");
-                return;
-            }
-            if (servicio.getDuracionMinutos() <= 0) {
-                errorResponse(ctx, 400, "La duración en minutos debe ser mayor a 0");
+            if (servicio.getNombreServicio() == null || servicio.getPrecio() <= 0 || servicio.getDuracionMinutos() <= 0) {
+                errorResponse(ctx, 400, "Nombre, precio y duración son obligatorios.");
                 return;
             }
 
-            int idGenerado = servicioService.saveServicio(servicio);
-            Map<String, Integer> data = new HashMap<>();
-            data.put("id", idGenerado);
+            Servicio servicioCreado = servicioService.create(servicio);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("idServicio", servicioCreado.getIdServicio());
+            data.put("nombre", servicioCreado.getNombreServicio());
+            data.put("precio", servicioCreado.getPrecio());
+            data.put("duracion", servicioCreado.getDuracionMinutos());
+
             successResponse(ctx, 201, "Servicio creado exitosamente", data);
-
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al crear el servicio: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
             errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
@@ -76,39 +74,21 @@ public class ServicioController {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
             Servicio servicio = ctx.bodyAsClass(Servicio.class);
-
-            // Verificar existencia
-            Servicio existente = servicioService.findById(id);
-            if (existente == null) {
-                errorResponse(ctx, 404, "Servicio no encontrado para actualizar");
+            
+            if (servicioService.findById(id) == null) {
+                errorResponse(ctx, 404, "Servicio no encontrado para actualizar.");
                 return;
             }
 
-            // Validaciones
-            if (servicio.getNombreServicio() == null || servicio.getNombreServicio().trim().isEmpty()) {
-                errorResponse(ctx, 400, "El nombre del servicio es obligatorio");
-                return;
-            }
-            if (servicio.getPrecio() <= 0) {
-                errorResponse(ctx, 400, "El precio debe ser mayor a 0");
-                return;
-            }
-            if (servicio.getDuracionMinutos() <= 0) {
-                errorResponse(ctx, 400, "La duración en minutos debe ser mayor a 0");
-                return;
-            }
-
-            boolean actualizado = servicioService.updateServicio(id, servicio);
-            if (actualizado) {
-                successResponse(ctx, 200, "Servicio actualizado correctamente", null);
+            if (servicioService.update(id, servicio)) {
+                successResponse(ctx, 200, "Servicio actualizado exitosamente", null);
             } else {
                 errorResponse(ctx, 500, "No se pudo actualizar el servicio.");
             }
-
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "El ID del servicio debe ser un número válido");
+            errorResponse(ctx, 400, "ID de servicio inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al actualizar el servicio: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
             errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
@@ -117,33 +97,27 @@ public class ServicioController {
     public void delete(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-
-            // Verificar existencia
-            Servicio existente = servicioService.findById(id);
-            if (existente == null) {
-                errorResponse(ctx, 404, "Servicio no encontrado para eliminar");
+            if (servicioService.findById(id) == null) {
+                errorResponse(ctx, 404, "Servicio no encontrado para eliminar.");
                 return;
             }
-
-            boolean eliminado = servicioService.deleteServicio(id);
-            if (eliminado) {
-                successResponse(ctx, 200, "Servicio eliminado correctamente", null);
+            if (servicioService.delete(id)) {
+                successResponse(ctx, 200, "Servicio eliminado exitosamente", null);
             } else {
                 errorResponse(ctx, 500, "No se pudo eliminar el servicio.");
             }
-
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "El ID del servicio debe ser un número válido");
+            errorResponse(ctx, 400, "ID de servicio inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al eliminar el servicio: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
-    // --- Métodos de ayuda para respuestas ---
+    // --- Métodos de ayuda ---
 
     private void successResponse(Context ctx, int statusCode, String message, Object data) {
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
+        response.put("status", "success");
         response.put("message", message);
         if (data != null) {
             response.put("data", data);
@@ -153,7 +127,7 @@ public class ServicioController {
 
     private void errorResponse(Context ctx, int statusCode, String message) {
         Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
+        response.put("status", "error");
         response.put("message", message);
         ctx.status(statusCode).json(response);
     }

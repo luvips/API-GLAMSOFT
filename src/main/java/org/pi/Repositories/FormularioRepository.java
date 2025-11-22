@@ -1,88 +1,86 @@
 package org.pi.Repositories;
+
 import org.pi.Config.DBconfig;
 import org.pi.Models.Formulario;
+
 import java.sql.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FormularioRepository {
-    //mostrar todos los formularios
-    public List<Formulario> findAll()throws SQLException{
+
+    private Formulario mapResultSetToFormulario(ResultSet rs) throws SQLException {
+        Formulario formulario = new Formulario();
+        formulario.setIdFormulario(rs.getInt("id_formulario"));
+        formulario.setNombreFormulario(rs.getString("nombre_formulario"));
+        formulario.setDescripcion(rs.getString("descripcion"));
+        formulario.setActivo(rs.getBoolean("activo"));
+        return formulario;
+    }
+
+    public List<Formulario> findAll() throws SQLException {
         List<Formulario> formularios = new ArrayList<>();
-        String sql = "SELECT * FROM formulario";
-        try(
-                Connection conn = DBconfig.getDataSource().getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql);
-                ResultSet rs = stmt.executeQuery()
-                ){
-            while(rs.next()){
-                Formulario formulario = new Formulario();
-               formulario.setNombreFormulario(rs.getString("nombre_formulario"));
-                formularios.add(formulario);
+        String sql = "SELECT * FROM formulario WHERE activo = TRUE";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                formularios.add(mapResultSetToFormulario(rs));
             }
         }
         return formularios;
     }
-    public int save(Formulario formulario)throws SQLException{
-        String sql = "INSERT INTO formulario(nombre_formulario) VALUES(?)";
-        try(
-                Connection conn = DBconfig.getDataSource().getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-                ){
-            stmt.setString(1, formulario.getNombreFormulario());
-            int filasAfectadas = stmt.executeUpdate();
-            //verificacion
-            if (filasAfectadas == 0){
-                System.out.println("ERROR");
-            }else {
-                System.out.println("EXITO");
-            }
 
-            try(ResultSet claves = stmt.getGeneratedKeys()){
-                if(claves.next()){
-                    int id = claves.getInt(1);
-                    return id;
-                } else {
-                    throw new SQLException("No se encontro id");
+    public Formulario findById(int id) throws SQLException {
+        String sql = "SELECT * FROM formulario WHERE id_formulario = ? AND activo = TRUE";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToFormulario(rs);
                 }
             }
         }
+        return null;
     }
 
-   public void delete(int id_formulario)throws SQLException{
-        String sql = "DELETE FROM formulario WHERE id_formulario = ?";
-        try(
-                Connection conn = DBconfig.getDataSource().getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql);
-                ){
-            stmt.setInt(1,id_formulario);
-            int filasAfectadas = stmt.executeUpdate();
-            //verificacion
-            if (filasAfectadas == 0){
-                System.out.println("No se encontro el id");
-            }
-        }
-   }
-
-    public void update(Formulario formulario)throws SQLException{
-        String sql = "UPDATE formulario SET nombre_formulario = ? WHERE id_formulario = ?";
-        try(
-                Connection conn = DBconfig.getDataSource().getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql);
-        ){
+    public Formulario save(Formulario formulario) throws SQLException {
+        String sql = "INSERT INTO formulario(nombre_formulario, descripcion) VALUES(?,?)";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, formulario.getNombreFormulario());
-            stmt.setInt(2,formulario.getIdFormulario());
-            int filasAfectadas = stmt.executeUpdate();
-            //verificacion
-            if (filasAfectadas == 0){
-                System.out.println("No se encontro el id");
-            }else {
-                System.out.println("actualizacion exitosa");
+            stmt.setString(2, formulario.getDescripcion());
+            
+            if (stmt.executeUpdate() > 0) {
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        formulario.setIdFormulario(rs.getInt(1));
+                        return formulario;
+                    }
+                }
             }
+            throw new SQLException("No se pudo guardar el formulario.");
+        }
+    }
+
+    public boolean update(Formulario formulario) throws SQLException {
+        String sql = "UPDATE formulario SET nombre_formulario = ?, descripcion = ? WHERE id_formulario = ?";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, formulario.getNombreFormulario());
+            stmt.setString(2, formulario.getDescripcion());
+            stmt.setInt(3, formulario.getIdFormulario());
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean softDelete(int id) throws SQLException {
+        String sql = "UPDATE formulario SET activo = FALSE WHERE id_formulario = ?";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            return stmt.executeUpdate() > 0;
         }
     }
 }

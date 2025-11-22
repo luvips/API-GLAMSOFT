@@ -5,88 +5,32 @@ import org.pi.Repositories.FormularioRepository;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class FormularioService {
     private final FormularioRepository formularioRepository;
 
-    public FormularioService(FormularioRepository fr) {
-        this.formularioRepository = fr;
+    public FormularioService(FormularioRepository formularioRepository) {
+        this.formularioRepository = formularioRepository;
     }
 
-    public List<Formulario> findAllFormulario() throws SQLException {
+    public List<Formulario> findAll() throws SQLException {
         return formularioRepository.findAll();
     }
 
-    public Formulario findFormulario(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID del formulario debe ser mayor a cero");
-        }
-        List<Formulario> formularios = formularioRepository.findAll();
-        return formularios.stream()
-                .filter(f -> f.getIdFormulario() == id)
-                .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("No se encontró el formulario con ID: " + id));
+    public Formulario findById(int id) throws SQLException {
+        return formularioRepository.findById(id);
     }
 
-    public int saveFormulario(Formulario formulario) throws SQLException {
-        String nombre = formulario.getNombreFormulario();
-
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del formulario no puede estar vacío");
-        }
-
-        List<Formulario> formularios = findAllFormulario();
-        boolean existe = formularios.stream()
-                .anyMatch(f -> f.getNombreFormulario().equalsIgnoreCase(nombre));
-
-        if (existe) {
-            throw new IllegalArgumentException("Ya existe un formulario con ese nombre");
-        }
-
+    public Formulario create(Formulario formulario) throws SQLException {
         return formularioRepository.save(formulario);
     }
 
-    public void deleteFormulario(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID debe ser mayor a cero");
-        }
-
-        List<Formulario> formularios = findAllFormulario();
-        boolean existe = formularios.stream().anyMatch(f -> f.getIdFormulario() == id);
-
-        if (!existe) {
-            throw new NoSuchElementException("No se puede eliminar el formulario. No existe un formulario con ese ID");
-        }
-
-        formularioRepository.delete(id);
+    public boolean update(int id, Formulario formulario) throws SQLException {
+        formulario.setIdFormulario(id);
+        return formularioRepository.update(formulario);
     }
 
-
-    public void updateFormulario(Formulario formulario) throws SQLException {
-        if (formulario.getIdFormulario() <= 0) {
-            throw new IllegalArgumentException("El ID del formulario debe ser mayor a cero");
-        }
-
-        String nombre = formulario.getNombreFormulario();
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del formulario no puede estar vacío");
-        }
-
-        List<Formulario> formularios = findAllFormulario();
-        boolean existe = formularios.stream().anyMatch(f -> f.getIdFormulario() == formulario.getIdFormulario());
-        if (!existe) {
-            throw new NoSuchElementException("No se puede actualizar el formulario. No existe un formulario con ese ID");
-        }
-
-        boolean nombreDuplicado = formularios.stream()
-                .anyMatch(f -> f.getNombreFormulario().equalsIgnoreCase(nombre)
-                        && f.getNombreFormulario() != formulario.getNombreFormulario());
-        if (nombreDuplicado) {
-            throw new IllegalArgumentException("Otro formulario ya tiene ese nombre");
-        }
-
-        formularioRepository.update(formulario);
+    public boolean delete(int id) throws SQLException {
+        return formularioRepository.softDelete(id);
     }
 }
-

@@ -6,8 +6,9 @@ import java.util.List;
 public class Cita {
     private int idCita;
     private String estadoCita;
-    private LocalDateTime fechaCita;
+    private LocalDateTime fechaHoraCita;
     private LocalDateTime fechaSolicitudCita;
+    private String notas;
     private int idCliente;
     private int idEstilista;
     private int idHorario;
@@ -17,12 +18,13 @@ public class Cita {
     public Cita() {
     }
 
-    public Cita(int idCita, String estadoCita, LocalDateTime fechaCita,
-                LocalDateTime fechaSolicitudCita, int idCliente, int idEstilista, int idHorario, List<Integer> servicios) {
+    public Cita(int idCita, String estadoCita, LocalDateTime fechaHoraCita,
+                LocalDateTime fechaSolicitudCita, String notas, int idCliente, int idEstilista, int idHorario, List<Integer> servicios) {
         this.idCita = idCita;
         this.estadoCita = estadoCita;
-        this.fechaCita = fechaCita;
+        this.fechaHoraCita = fechaHoraCita;
         this.fechaSolicitudCita = fechaSolicitudCita;
+        this.notas = notas;
         this.idCliente = idCliente;
         this.idEstilista = idEstilista;
         this.idHorario = idHorario;
@@ -48,12 +50,12 @@ public class Cita {
         this.estadoCita = estadoCita;
     }
 
-    public LocalDateTime getFechaCita() {
-        return fechaCita;
+    public LocalDateTime getFechaHoraCita() {
+        return fechaHoraCita;
     }
 
-    public void setFechaCita(LocalDateTime fechaCita) {
-        this.fechaCita = fechaCita;
+    public void setFechaHoraCita(LocalDateTime fechaHoraCita) {
+        this.fechaHoraCita = fechaHoraCita;
     }
 
     public LocalDateTime getFechaSolicitudCita() {
@@ -62,6 +64,14 @@ public class Cita {
 
     public void setFechaSolicitudCita(LocalDateTime fechaSolicitudCita) {
         this.fechaSolicitudCita = fechaSolicitudCita;
+    }
+
+    public String getNotas() {
+        return notas;
+    }
+
+    public void setNotas(String notas) {
+        this.notas = notas;
     }
 
     public int getIdCliente() {

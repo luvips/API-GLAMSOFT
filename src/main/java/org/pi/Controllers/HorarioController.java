@@ -3,6 +3,7 @@ package org.pi.Controllers;
 import io.javalin.http.Context;
 import org.pi.Models.Horario;
 import org.pi.Services.HorarioService;
+import org.pi.dto.HorarioDTO;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -19,55 +20,53 @@ public class HorarioController {
 
     public void getAll(Context ctx) {
         try {
-            List<Horario> horarios = horarioService.findAll();
-            successResponse(ctx, 200, "Horarios recuperados correctamente", horarios);
+            List<HorarioDTO> horarios = horarioService.findAll();
+            successResponse(ctx, 200, "Horarios recuperados", horarios);
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al obtener horarios: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
     public void getById(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            Horario horario = horarioService.findById(id);
-
+            HorarioDTO horario = horarioService.findById(id);
             if (horario == null) {
-                errorResponse(ctx, 404, "Horario no encontrado");
+                errorResponse(ctx, 404, "Horario no encontrado.");
                 return;
             }
             successResponse(ctx, 200, "Horario encontrado", horario);
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "El ID del horario debe ser un número válido");
+            errorResponse(ctx, 400, "ID de horario inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al buscar el horario: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
     public void create(Context ctx) {
         try {
-            Horario horario = ctx.bodyAsClass(Horario.class);
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+            
+            Horario horario = new Horario();
+            horario.setDiaSemana((String) body.get("dia"));
+            horario.setHoraInicio(java.time.LocalTime.parse((String) body.get("horaInicio")));
+            horario.setHoraFin(java.time.LocalTime.parse((String) body.get("horaFin")));
+            
+            int idEstilista = (Integer) body.get("idEstilista");
 
-            // Validaciones
-            if (horario.getHoraInicio() == null || horario.getHoraFin() == null) {
-                errorResponse(ctx, 400, "La hora de inicio y fin son obligatorias");
-                return;
-            }
-            if (horario.getHoraFin().isBefore(horario.getHoraInicio())) {
-                errorResponse(ctx, 400, "La hora de fin no puede ser anterior a la de inicio.");
-                return;
-            }
-            if (horario.getDiaSemana() == null || horario.getDiaSemana().trim().isEmpty()) {
-                errorResponse(ctx, 400, "El día de la semana es obligatorio");
-                return;
-            }
+            Horario horarioCreado = horarioService.create(horario, idEstilista);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("idHorario", horarioCreado.getIdHorario());
+            data.put("dia", horarioCreado.getDiaSemana());
+            data.put("horaInicio", horarioCreado.getHoraInicio().toString());
+            data.put("horaFin", horarioCreado.getHoraFin().toString());
 
-            int idGenerado = horarioService.save(horario);
-            Map<String, Integer> data = new HashMap<>();
-            data.put("id", idGenerado);
             successResponse(ctx, 201, "Horario creado exitosamente", data);
-
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al crear el horario: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
             errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
@@ -76,42 +75,26 @@ public class HorarioController {
     public void update(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            Horario horario = ctx.bodyAsClass(Horario.class);
-
-            // Verificar existencia
-            Horario existente = horarioService.findById(id);
-            if (existente == null) {
-                errorResponse(ctx, 404, "Horario no encontrado para actualizar");
-                return;
-            }
-
-            // Validaciones
-            if (horario.getHoraInicio() == null || horario.getHoraFin() == null) {
-                errorResponse(ctx, 400, "La hora de inicio y fin son obligatorias");
-                return;
-            }
-            if (horario.getHoraFin().isBefore(horario.getHoraInicio())) {
-                errorResponse(ctx, 400, "La hora de fin no puede ser anterior a la de inicio.");
-                return;
-            }
-            if (horario.getDiaSemana() == null || horario.getDiaSemana().trim().isEmpty()) {
-                errorResponse(ctx, 400, "El día de la semana es obligatorio");
+            Map<String, String> body = ctx.bodyAsClass(Map.class);
+            
+            if (horarioService.findById(id) == null) {
+                errorResponse(ctx, 404, "Horario no encontrado para actualizar.");
                 return;
             }
             
-            horario.setIdHorario(id);
-            boolean actualizado = horarioService.update(horario);
+            Horario horario = new Horario();
+            horario.setHoraInicio(java.time.LocalTime.parse(body.get("horaInicio")));
+            horario.setHoraFin(java.time.LocalTime.parse(body.get("horaFin")));
 
-            if (actualizado) {
-                successResponse(ctx, 200, "Horario actualizado correctamente", null);
+            if (horarioService.update(id, horario)) {
+                successResponse(ctx, 200, "Horario actualizado exitosamente", null);
             } else {
                 errorResponse(ctx, 500, "No se pudo actualizar el horario.");
             }
-
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "El ID del horario debe ser un número válido");
+            errorResponse(ctx, 400, "ID de horario inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al actualizar el horario: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
             errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
@@ -120,33 +103,27 @@ public class HorarioController {
     public void delete(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-
-            // Verificar existencia
-            Horario existente = horarioService.findById(id);
-            if (existente == null) {
-                errorResponse(ctx, 404, "Horario no encontrado para eliminar");
+            if (horarioService.findById(id) == null) {
+                errorResponse(ctx, 404, "Horario no encontrado para eliminar.");
                 return;
             }
-
-            boolean eliminado = horarioService.delete(id);
-            if (eliminado) {
-                successResponse(ctx, 200, "Horario eliminado correctamente", null);
+            if (horarioService.delete(id)) {
+                successResponse(ctx, 200, "Horario eliminado exitosamente", null);
             } else {
                 errorResponse(ctx, 500, "No se pudo eliminar el horario.");
             }
-
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "El ID del horario debe ser un número válido");
+            errorResponse(ctx, 400, "ID de horario inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos al eliminar el horario: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
-    // --- Métodos de ayuda para respuestas ---
+    // --- Métodos de ayuda ---
 
     private void successResponse(Context ctx, int statusCode, String message, Object data) {
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
+        response.put("status", "success");
         response.put("message", message);
         if (data != null) {
             response.put("data", data);
@@ -156,7 +133,7 @@ public class HorarioController {
 
     private void errorResponse(Context ctx, int statusCode, String message) {
         Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
+        response.put("status", "error");
         response.put("message", message);
         ctx.status(statusCode).json(response);
     }

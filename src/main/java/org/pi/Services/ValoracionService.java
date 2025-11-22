@@ -1,47 +1,43 @@
 package org.pi.Services;
 
-
 import org.pi.Models.Valoracion;
 import org.pi.Repositories.ValoracionRepository;
+import org.pi.dto.ValoracionDTO;
+
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
-public class ValoracionService {
-    private final ValoracionRepository valoracionRepository;
+public record ValoracionService(ValoracionRepository valoracionRepository) {
 
-    public ValoracionService(ValoracionRepository valoracionRepository) {
-        this.valoracionRepository = valoracionRepository;
+    public List<ValoracionDTO> findAll() throws SQLException {
+        return valoracionRepository.findAll();
     }
 
-    public List<Valoracion> findAll() throws SQLException {
-        List<Valoracion> valoraciones = valoracionRepository.findAll();
-        if (valoraciones.isEmpty()) {
-            throw new SQLException("No se encontraron valoraciones registradas");
-        }
-        return valoraciones;
+    public ValoracionDTO findById(int id) throws SQLException {
+        return valoracionRepository.findById(id);
     }
 
-    public int save(Valoracion valoracion) throws SQLException {
-        if (valoracion == null) {
-            throw new IllegalArgumentException("La valoración no puede ser nula");
+    public Valoracion create(Valoracion valoracion) throws SQLException, IllegalStateException {
+        // Regla de negocio: La cita debe estar completada
+        if (!valoracionRepository.isCitaCompletada(valoracion.getIdCita())) {
+            throw new IllegalStateException("Solo se pueden valorar citas completadas.");
         }
 
-        if (valoracion.getPuntuacion() < 0 || valoracion.getPuntuacion() > 5) {
-            throw new IllegalArgumentException("La puntuación debe estar entre 0 y 5");
-        }
-
-        if (valoracion.getIdCita() <= 0 || valoracion.getIdCliente() <= 0 || valoracion.getIdServicio() <= 0) {
-            throw new IllegalArgumentException("Los IDs de cita, cliente y servicio deben ser válidos");
+        // Validación de la puntuación
+        if (valoracion.getPuntuacion().compareTo(BigDecimal.ONE) < 0 || valoracion.getPuntuacion().compareTo(new BigDecimal("5")) > 0) {
+            throw new IllegalArgumentException("La calificación debe estar entre 1.0 y 5.0");
         }
 
         return valoracionRepository.save(valoracion);
     }
 
-    public void delete(int id) throws SQLException {
-        if (id <= 0) {
-            throw new IllegalArgumentException("El ID de la valoración debe ser válido");
-        }
-        valoracionRepository.delete(id);
+    public boolean update(int id, Valoracion valoracion) throws SQLException {
+        valoracion.setIdValoracion(id);
+        return valoracionRepository.update(valoracion);
+    }
+
+    public boolean delete(int id) throws SQLException {
+        return valoracionRepository.delete(id);
     }
 }
-

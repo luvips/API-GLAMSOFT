@@ -4,6 +4,8 @@ public class Pregunta {
     private int idPregunta;
     private String pregunta;
     private String respuesta;
+    private String categoria;
+    private boolean activo;
     private int idFormulario;
 
     public Pregunta() {
@@ -22,6 +24,15 @@ public class Pregunta {
         this.idPregunta = idPregunta;
         this.pregunta = pregunta;
         this.respuesta = respuesta;
+        this.idFormulario = idFormulario;
+    }
+
+    public Pregunta(int idPregunta, String pregunta, String respuesta, String categoria, boolean activo, int idFormulario) {
+        this.idPregunta = idPregunta;
+        this.pregunta = pregunta;
+        this.respuesta = respuesta;
+        this.categoria = categoria;
+        this.activo = activo;
         this.idFormulario = idFormulario;
     }
 
@@ -47,6 +58,22 @@ public class Pregunta {
 
     public void setRespuesta(String respuesta) {
         this.respuesta = respuesta;
+    }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 
     public int getIdFormulario() {

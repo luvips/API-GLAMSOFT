@@ -2,6 +2,7 @@ package org.pi.Services;
 
 import org.pi.Models.Comentario;
 import org.pi.Repositories.ComentarioRepository;
+import org.pi.dto.ComentarioDTO;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -13,24 +14,20 @@ public class ComentarioService {
         this.comentarioRepository = comentarioRepository;
     }
 
-    public List<Comentario> findAll() throws SQLException {
+    public List<ComentarioDTO> findAll() throws SQLException {
         return comentarioRepository.findAll();
     }
 
-    public Comentario findById(int id) throws SQLException {
+    public ComentarioDTO findById(int id) throws SQLException {
         return comentarioRepository.findById(id);
     }
 
-    public List<Comentario> findByCliente(int idCliente) throws SQLException {
-        return comentarioRepository.findComentariosByCliente(idCliente);
+
+    public List<ComentarioDTO> findByCliente(int idCliente) throws SQLException {
+        return comentarioRepository.findByCliente(idCliente);
     }
 
-    public List<Comentario> findLatest(int limit) throws SQLException {
-        return comentarioRepository.findLatest(limit);
-    }
-
-    public int create(Comentario comentario) throws SQLException {
-        // Las validaciones de datos se manejan en el controlador.
+    public Comentario create(Comentario comentario) throws SQLException {
         return comentarioRepository.save(comentario);
     }
 
@@ -40,6 +37,6 @@ public class ComentarioService {
     }
 
     public boolean delete(int id) throws SQLException {
-        return comentarioRepository.delete(id);
+        return comentarioRepository.softDelete(id);
     }
 }

@@ -1,8 +1,8 @@
 package org.pi.Services;
 
-
 import org.pi.Models.Rol;
 import org.pi.Repositories.RolRepository;
+
 import java.sql.SQLException;
 import java.util.List;
 
@@ -13,40 +13,24 @@ public class RolService {
         this.rolRepository = rolRepository;
     }
 
-
-    public List<Rol> findAllRol() throws SQLException {
-        List<Rol> roles = rolRepository.findAllRol();
-        if (roles.isEmpty()) {
-            throw new SQLException("No se encontraron roles registrados");
-        }
-        return roles;
+    public List<Rol> findAll() throws SQLException {
+        return rolRepository.findAll();
     }
 
-    public Rol findRol(int idRol) throws SQLException {
-        if (idRol <= 0) {
-            throw new IllegalArgumentException("El ID del rol debe ser mayor a cero");
-        }
-        Rol rol = rolRepository.findRol(idRol);
-        if (rol == null) {
-            throw new SQLException("No se encontró el rol con el ID especificado");
-        }
-        return rol;
+    public Rol findById(int id) throws SQLException {
+        return rolRepository.findById(id);
     }
 
+    public Rol create(Rol rol) throws SQLException {
+        return rolRepository.save(rol);
+    }
 
-    public int saveRol(Rol rol) throws SQLException {
-        if (rol == null) {
-            throw new IllegalArgumentException("El objeto rol no puede ser nulo");
-        }
-        if (rol.getNombreRol() == null || rol.getNombreRol().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del rol no puede estar vacío");
-        }
-        String nombreRol = rol.getNombreRol();
-        List<Rol> roles = findAllRol();
-        boolean existe = roles.stream().anyMatch(r -> r.getNombreRol().equalsIgnoreCase(nombreRol));
-        if (existe){
-            throw new IllegalArgumentException("Ya existe un rol con ese nombre");
-        }
-       return rolRepository.saveRol(rol);
+    public boolean update(int id, Rol rol) throws SQLException {
+        rol.setIdRol(id);
+        return rolRepository.update(rol);
+    }
+
+    public boolean delete(int id) throws SQLException {
+        return rolRepository.softDelete(id);
     }
 }

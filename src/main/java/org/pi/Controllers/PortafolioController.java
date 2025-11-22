@@ -1,78 +1,131 @@
 package org.pi.Controllers;
 
-
 import io.javalin.http.Context;
 import org.pi.Models.Portafolio;
 import org.pi.Services.PortafolioService;
+import org.pi.dto.PortafolioDTO;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PortafolioController {
-
     private final PortafolioService portafolioService;
 
     public PortafolioController(PortafolioService portafolioService) {
         this.portafolioService = portafolioService;
     }
 
-    public void find4(Context ctx){
-        try{
-            List<Portafolio> portafolios = portafolioService.find4();
-            ctx.status(200).json(portafolios);
-        } catch (SQLException e) {
-            ctx.status(500).result("Error al obtener el portafolio: " + e.getMessage());
-        }
-    }
-    public void findAll(Context ctx) {
+    public void getAll(Context ctx) {
         try {
-            List<Portafolio> portafolios = portafolioService.findAll();
-            ctx.status(200).json(portafolios);
+            List<PortafolioDTO> portafolios = portafolioService.findAll();
+            successResponse(ctx, 200, "Portafolio recuperado", portafolios);
         } catch (SQLException e) {
-            ctx.status(500).result("Error al obtener el portafolio: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
-    //GuardarImagen
-    public void savePortafolio(Context ctx) {
+
+    public void getById(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            PortafolioDTO portafolio = portafolioService.findById(id);
+            if (portafolio == null) {
+                errorResponse(ctx, 404, "Entrada de portafolio no encontrada.");
+                return;
+            }
+            successResponse(ctx, 200, "Entrada de portafolio encontrada", portafolio);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "ID de portafolio inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void create(Context ctx) {
         try {
             Portafolio portafolio = ctx.bodyAsClass(Portafolio.class);
-            int idGenerado = portafolioService.save(portafolio);
-            ctx.status(201).result("Imagen agregada al portafolio con ID: " + idGenerado);
-        } catch (IllegalArgumentException e) {
-            ctx.status(400).result("Error de validación: " + e.getMessage());
+            
+            if (portafolio.getTitulo() == null || portafolio.getUrl() == null) {
+                errorResponse(ctx, 400, "Título y URL de la imagen son obligatorios.");
+                return;
+            }
+
+            Portafolio portafolioCreado = portafolioService.create(portafolio);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("idPortafolio", portafolioCreado.getIdImagen());
+            data.put("titulo", portafolioCreado.getTitulo());
+            data.put("fecha", LocalDateTime.now().toString());
+
+            successResponse(ctx, 201, "Portafolio creado exitosamente", data);
         } catch (SQLException e) {
-            ctx.status(500).result("Error en la base de datos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
-
-    public void updatePortafolio(Context ctx) {
+    public void update(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
             Portafolio portafolio = ctx.bodyAsClass(Portafolio.class);
-            portafolio.setIdImagen(id);
-            portafolioService.update(portafolio);
-            ctx.status(200).result("Imagen actualizada correctamente.");
+            
+            if (portafolioService.findById(id) == null) {
+                errorResponse(ctx, 404, "Entrada de portafolio no encontrada para actualizar.");
+                return;
+            }
+
+            if (portafolioService.update(id, portafolio)) {
+                successResponse(ctx, 200, "Portafolio actualizado exitosamente", null);
+            } else {
+                errorResponse(ctx, 500, "No se pudo actualizar la entrada del portafolio.");
+            }
         } catch (NumberFormatException e) {
-            ctx.status(400).result("El ID debe ser un número válido.");
-        } catch (IllegalArgumentException e) {
-            ctx.status(400).result(e.getMessage());
+            errorResponse(ctx, 400, "ID de portafolio inválido.");
         } catch (SQLException e) {
-            ctx.status(500).result("Error en la base de datos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
-
-    public void deletePortafolio(Context ctx) {
+    public void delete(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            portafolioService.delete(id);
-            ctx.status(200).result("Imagen eliminada correctamente.");
+            if (portafolioService.findById(id) == null) {
+                errorResponse(ctx, 404, "Entrada de portafolio no encontrada para eliminar.");
+                return;
+            }
+            if (portafolioService.delete(id)) {
+                successResponse(ctx, 200, "Portafolio eliminado exitosamente", null);
+            } else {
+                errorResponse(ctx, 500, "No se pudo eliminar la entrada del portafolio.");
+            }
         } catch (NumberFormatException e) {
-            ctx.status(400).result("El ID debe ser un número válido.");
+            errorResponse(ctx, 400, "ID de portafolio inválido.");
         } catch (SQLException e) {
-            ctx.status(500).result("Error en la base de datos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
+    }
+
+    // --- Métodos de ayuda ---
+
+    private void successResponse(Context ctx, int statusCode, String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", message);
+        if (data != null) {
+            response.put("data", data);
+        }
+        ctx.status(statusCode).json(response);
+    }
+
+    private void errorResponse(Context ctx, int statusCode, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", message);
+        ctx.status(statusCode).json(response);
     }
 }
-

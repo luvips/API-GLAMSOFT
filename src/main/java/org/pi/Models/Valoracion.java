@@ -1,8 +1,11 @@
 package org.pi.Models;
 
+import java.math.BigDecimal;
+
 public class Valoracion {
     private int idValoracion;
-    private double puntuacion;
+    private BigDecimal puntuacion;
+    private String comentario;
     private int idCita;
     private int  idCliente;
     private int idServicio;
@@ -10,9 +13,10 @@ public class Valoracion {
     public Valoracion() {
     }
 
-    public Valoracion(int idValoracion, double puntuacion, int idCita, int idCliente, int idServicio) {
+    public Valoracion(int idValoracion, BigDecimal puntuacion, String comentario, int idCita, int idCliente, int idServicio) {
         this.idValoracion = idValoracion;
         this.puntuacion = puntuacion;
+        this.comentario = comentario;
         this.idCita = idCita;
         this.idCliente = idCliente;
         this.idServicio = idServicio;
@@ -26,12 +30,20 @@ public class Valoracion {
         this.idValoracion = idValoracion;
     }
 
-    public double getPuntuacion() {
+    public BigDecimal getPuntuacion() {
         return puntuacion;
     }
 
-    public void setPuntuacion(double puntuacion) {
+    public void setPuntuacion(BigDecimal puntuacion) {
         this.puntuacion = puntuacion;
+    }
+
+    public String getComentario() {
+        return comentario;
+    }
+
+    public void setComentario(String comentario) {
+        this.comentario = comentario;
     }
 
     public int getIdCita() {

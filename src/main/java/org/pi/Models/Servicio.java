@@ -9,6 +9,7 @@ public class Servicio {
     private String descripcion;
     private int idCategoria;
     private Integer idFormulario; // Cambiado a Integer para permitir nulos
+    private boolean activo;
 
     public Servicio() {
     }
@@ -26,7 +27,7 @@ public class Servicio {
     }
 
     public Servicio(int idServicio, String imagenURL,
-                    String nombreServicio, int duracionMinutos, double precio, String descripcion, int idCategoria, Integer idFormulario) {
+                    String nombreServicio, int duracionMinutos, double precio, String descripcion, int idCategoria, Integer idFormulario, boolean activo) {
         this.idServicio = idServicio;
         this.imagenURL = imagenURL;
         this.nombreServicio = nombreServicio;
@@ -35,6 +36,7 @@ public class Servicio {
         this.descripcion = descripcion;
         this.idCategoria = idCategoria;
         this.idFormulario = idFormulario;
+        this.activo = activo;
     }
 
     public Servicio(int idServicio, String nombreServicio, String descripcion) {
@@ -111,5 +113,13 @@ public class Servicio {
 
     public void setIdFormulario(Integer idFormulario) {
         this.idFormulario = idFormulario;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public void setActivo(boolean activo) {
+        this.activo = activo;
     }
 }

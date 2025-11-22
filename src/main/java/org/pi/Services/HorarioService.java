@@ -2,6 +2,7 @@ package org.pi.Services;
 
 import org.pi.Models.Horario;
 import org.pi.Repositories.HorarioRepository;
+import org.pi.dto.HorarioDTO;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -14,25 +15,27 @@ public class HorarioService {
         this.horarioRepository = horarioRepository;
     }
 
-    public List<Horario> findAll() throws SQLException {
+    public List<HorarioDTO> findAll() throws SQLException {
         return horarioRepository.findAll();
     }
 
-    public Horario findById(int id) throws SQLException {
+    public HorarioDTO findById(int id) throws SQLException {
         return horarioRepository.findById(id);
     }
 
-    public int save(Horario horario) throws SQLException {
-        // Las validaciones de datos de entrada se manejan en el controlador.
-        return horarioRepository.save(horario);
+    public Horario create(Horario horario, int idEstilista) throws SQLException {
+        if (idEstilista <= 0) {
+            throw new IllegalArgumentException("Se requiere un ID de estilista válido.");
+        }
+        return horarioRepository.save(horario, idEstilista);
     }
 
-    public boolean update(Horario horario) throws SQLException {
-        // El ID ya viene en el objeto desde el controlador
+    public boolean update(int id, Horario horario) throws SQLException {
+        horario.setIdHorario(id);
         return horarioRepository.update(horario);
     }
 
     public boolean delete(int id) throws SQLException {
-        return horarioRepository.delete(id);
+        return horarioRepository.softDelete(id);
     }
 }

@@ -13,14 +13,11 @@ public class ComentarioRouter implements IRouter {
 
     @Override
     public void register(Javalin app) {
-        // Rutas CRUD estándar para Comentarios
         app.get("/api/comentarios", comentarioController::getAll);
         app.post("/api/comentarios", comentarioController::create);
         app.get("/api/comentarios/{id}", comentarioController::getById);
         app.put("/api/comentarios/{id}", comentarioController::update);
         app.delete("/api/comentarios/{id}", comentarioController::delete);
-
-        // Ruta específica para obtener comentarios de un cliente
         app.get("/api/comentarios/cliente/{idCliente}", comentarioController::getByCliente);
     }
 }

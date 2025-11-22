@@ -1,18 +1,22 @@
 package org.pi.Routers;
 
 import io.javalin.Javalin;
+import org.pi.Config.IRouter;
 import org.pi.Controllers.ValoracionController;
 
-public class ValoracionRouter {
+public class ValoracionRouter implements IRouter {
     private final ValoracionController valoracionController;
 
-    public ValoracionRouter(ValoracionController valoracionController) {
-        this.valoracionController = valoracionController;
+    public ValoracionRouter(ValoracionController controller) {
+        this.valoracionController = controller;
     }
 
-    public void register(Javalin app){
-        app.get("/valoraciones",valoracionController::findAll);
-        app.post("/valoraciones",valoracionController::saveValoracion);
-        app.delete("/valoraciones/{id}",valoracionController::deleteValoracion);
+    @Override
+    public void register(Javalin app) {
+        app.get("/api/valoraciones", valoracionController::getAll);
+        app.post("/api/valoraciones", valoracionController::create);
+        app.get("/api/valoraciones/{id}", valoracionController::getById);
+        app.put("/api/valoraciones/{id}", valoracionController::update);
+        app.delete("/api/valoraciones/{id}", valoracionController::delete);
     }
 }

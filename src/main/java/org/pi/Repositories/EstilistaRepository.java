@@ -1,87 +1,131 @@
 package org.pi.Repositories;
 
 import org.pi.Config.DBconfig;
-import org.pi.Models.*;
+import org.pi.Models.Estilista;
 import org.pi.dto.EstilistaDTO;
+import org.pi.dto.HorarioDTO;
 
 import java.sql.*;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class EstilistaRepository {
 
-    // --- MÉTODOS DE LECTURA ---
-
-    public List<EstilistaDTO> findAllEstilistas() throws SQLException {
+    public List<EstilistaDTO> findAll() throws SQLException {
         List<EstilistaDTO> estilistas = new ArrayList<>();
-        String sql = "SELECT e.id_empleado, e.nombre, e.telefono, u.email AS email_usuario, " +
-                     "GROUP_CONCAT(DISTINCT s.nombre_servicio SEPARATOR ', ') AS nombres_servicios, " +
-                     "GROUP_CONCAT(DISTINCT CONCAT(h.dia_semana, ' ', TIME_FORMAT(h.hora_inicio, '%H:%i'), '-', TIME_FORMAT(h.hora_fin, '%H:%i')) SEPARATOR '; ') AS horarios_completos " +
-                     "FROM empleado e " +
-                     "JOIN usuario u ON e.id_usuario = u.id_usuario " +
-                     "LEFT JOIN estilista_servicio es ON e.id_empleado = es.id_estilista " +
-                     "LEFT JOIN servicio s ON es.id_servicio = s.id_servicio " +
-                     "LEFT JOIN estilista_horario eh ON e.id_empleado = eh.id_estilista " +
-                     "LEFT JOIN horario h ON eh.id_horario = h.id_horario " +
-                     "WHERE u.id_rol = 3 " + // Asumiendo que el rol de estilista es 3
-                     "GROUP BY e.id_empleado, e.nombre, e.telefono, u.email " +
-                     "ORDER BY e.nombre";
+        String sql = "SELECT " +
+                "e.id_empleado, e.nombre, e.puesto AS especialidad, e.telefono, u.email, e.activo, " +
+                "COALESCE(AVG(v.puntuacion), 0) AS valoracion_promedio, " +
+                "COUNT(DISTINCT v.id_valoracion) AS total_valoraciones " +
+                "FROM empleado e " +
+                "JOIN usuario u ON e.id_usuario = u.id_usuario " +
+                "LEFT JOIN cita c ON e.id_empleado = c.id_estilista " +
+                "LEFT JOIN valoracion v ON c.id_cita = v.id_cita " +
+                "WHERE u.id_rol = 2 AND e.activo = TRUE " + // Rol Estilista = 2
+                "GROUP BY e.id_empleado, e.nombre, e.puesto, e.telefono, u.email, e.activo";
+
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 EstilistaDTO dto = new EstilistaDTO();
-                dto.setIdEmpleado(rs.getInt("id_empleado"));
+                dto.setIdEstilista(rs.getInt("id_empleado"));
                 dto.setNombre(rs.getString("nombre"));
+                dto.setEspecialidad(rs.getString("especialidad"));
                 dto.setTelefono(rs.getString("telefono"));
-                dto.setEmailUsuario(rs.getString("email_usuario"));
-                dto.setServicios(rs.getString("nombres_servicios"));
-                dto.setHorarios(rs.getString("horarios_completos"));
+                dto.setEmail(rs.getString("email"));
+                dto.setActivo(rs.getBoolean("activo"));
+                dto.setValoracionPromedio(rs.getDouble("valoracion_promedio"));
+                dto.setTotalValoraciones(rs.getInt("total_valoraciones"));
                 estilistas.add(dto);
             }
         }
         return estilistas;
     }
 
-    public EstilistaDTO findEstilistaById(int id) throws SQLException {
-        // Implementación existente...
-        return null; // Placeholder
+    public EstilistaDTO findById(int id) throws SQLException {
+        EstilistaDTO dto = null;
+        String sql = "SELECT " +
+                "e.id_empleado, e.nombre, e.puesto AS especialidad, e.telefono, u.email, e.activo, " +
+                "COALESCE(AVG(v.puntuacion), 0) AS valoracion_promedio " +
+                "FROM empleado e " +
+                "JOIN usuario u ON e.id_usuario = u.id_usuario " +
+                "LEFT JOIN cita c ON e.id_empleado = c.id_estilista " +
+                "LEFT JOIN valoracion v ON c.id_cita = v.id_cita " +
+                "WHERE e.id_empleado = ? AND u.id_rol = 2 " +
+                "GROUP BY e.id_empleado";
+
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    dto = new EstilistaDTO();
+                    dto.setIdEstilista(rs.getInt("id_empleado"));
+                    dto.setNombre(rs.getString("nombre"));
+                    dto.setEspecialidad(rs.getString("especialidad"));
+                    dto.setTelefono(rs.getString("telefono"));
+                    dto.setEmail(rs.getString("email"));
+                    dto.setActivo(rs.getBoolean("activo"));
+                    dto.setValoracionPromedio(rs.getDouble("valoracion_promedio"));
+                    dto.setHorarios(findHorariosForEstilista(id, conn));
+                }
+            }
+        }
+        return dto;
     }
-    
-    // --- MÉTODOS DE ESCRITURA (CRUD) ---
+
+    private List<HorarioDTO> findHorariosForEstilista(int idEstilista, Connection conn) throws SQLException {
+        List<HorarioDTO> horarios = new ArrayList<>();
+        String sql = "SELECT h.dia_semana, h.hora_inicio, h.hora_fin " +
+                     "FROM estilista_horario eh " +
+                     "JOIN horario h ON eh.id_horario = h.id_horario " +
+                     "WHERE eh.id_estilista = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idEstilista);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    horarios.add(new HorarioDTO(
+                        rs.getString("dia_semana"),
+                        rs.getTime("hora_inicio").toLocalTime(),
+                        rs.getTime("hora_fin").toLocalTime()
+                    ));
+                }
+            }
+        }
+        return horarios;
+    }
 
     public Estilista save(Estilista estilista) throws SQLException {
-        String sqlUsuario = "INSERT INTO usuario (email, password, id_rol) VALUES (?, ?, ?)";
-        String sqlEmpleado = "INSERT INTO empleado (nombre, telefono, imagen_perfil, id_usuario) VALUES (?, ?, ?, ?)";
-        
+        String sqlUsuario = "INSERT INTO usuario (nombre, email, telefono, password, id_rol) VALUES (?, ?, ?, ?, ?)";
+        String sqlEmpleado = "INSERT INTO empleado (id_usuario, nombre, telefono, imagen_perfil, puesto) VALUES (?, ?, ?, ?, ?)";
+
         try (Connection conn = DBconfig.getDataSource().getConnection()) {
             try {
                 conn.setAutoCommit(false);
                 
-                int idUsuario;
                 try (PreparedStatement stmtUsuario = conn.prepareStatement(sqlUsuario, Statement.RETURN_GENERATED_KEYS)) {
-                    stmtUsuario.setString(1, estilista.getEmail());
-                    stmtUsuario.setString(2, estilista.getPassword());
-                    stmtUsuario.setInt(3, 3); // Rol de Estilista
+                    stmtUsuario.setString(1, estilista.getNombre());
+                    stmtUsuario.setString(2, estilista.getEmail());
+                    stmtUsuario.setString(3, estilista.getTelefono());
+                    stmtUsuario.setString(4, estilista.getPassword());
+                    stmtUsuario.setInt(5, 2); // Rol Estilista
                     stmtUsuario.executeUpdate();
                     try (ResultSet rs = stmtUsuario.getGeneratedKeys()) {
-                        if (!rs.next()) throw new SQLException("No se generó id_usuario");
-                        idUsuario = rs.getInt(1);
-                        estilista.setIdUsuario(idUsuario);
+                        if (rs.next()) estilista.setIdUsuario(rs.getInt(1));
+                        else throw new SQLException("No se generó id_usuario");
                     }
                 }
 
                 try (PreparedStatement stmtEmpleado = conn.prepareStatement(sqlEmpleado, Statement.RETURN_GENERATED_KEYS)) {
-                    stmtEmpleado.setString(1, estilista.getNombre());
-                    stmtEmpleado.setString(2, estilista.getTelefono());
-                    stmtEmpleado.setString(3, estilista.getImagenPerfil());
-                    stmtEmpleado.setInt(4, idUsuario);
+                    stmtEmpleado.setInt(1, estilista.getIdUsuario());
+                    stmtEmpleado.setString(2, estilista.getNombre());
+                    stmtEmpleado.setString(3, estilista.getTelefono());
+                    stmtEmpleado.setString(4, estilista.getImagenPerfil());
+                    stmtEmpleado.setString(5, estilista.getPuesto());
                     stmtEmpleado.executeUpdate();
                     try (ResultSet rs = stmtEmpleado.getGeneratedKeys()) {
-                        if (rs.next()) {
-                            estilista.setIdEmpleado(rs.getInt(1));
-                        }
+                        if (rs.next()) estilista.setIdEmpleado(rs.getInt(1));
                     }
                 }
                 
@@ -95,20 +139,30 @@ public class EstilistaRepository {
     }
 
     public boolean update(Estilista estilista) throws SQLException {
-        String sql = "UPDATE empleado SET nombre = ?, telefono = ?, imagen_perfil = ? WHERE id_empleado = ?";
+        String sql = "UPDATE empleado SET nombre = ?, telefono = ?, imagen_perfil = ?, puesto = ? WHERE id_empleado = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, estilista.getNombre());
             stmt.setString(2, estilista.getTelefono());
             stmt.setString(3, estilista.getImagenPerfil());
-            stmt.setInt(4, estilista.getIdEmpleado());
+            stmt.setString(4, estilista.getPuesto());
+            stmt.setInt(5, estilista.getIdEmpleado());
             return stmt.executeUpdate() > 0;
         }
     }
 
+    public boolean hasCitas(int idEstilista) throws SQLException {
+        String sql = "SELECT 1 FROM cita WHERE id_estilista = ? AND estado_cita IN ('PENDIENTE', 'CONFIRMADA') LIMIT 1";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idEstilista);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
     public boolean delete(int id) throws SQLException {
-        // Nota: Esto solo elimina el empleado, no el usuario asociado.
-        // Una eliminación completa requeriría una lógica más compleja.
         String sql = "DELETE FROM empleado WHERE id_empleado = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -116,7 +170,29 @@ public class EstilistaRepository {
             return stmt.executeUpdate() > 0;
         }
     }
-    
-    // --- MÉTODOS DE RELACIONES (ya existentes) ---
-    // ... (findHorarios, findServicios, saveHorarios, saveServicios, etc.)
+
+    public List<EstilistaDTO> findEstilistasByServicio(int idServicio) throws SQLException {
+        List<EstilistaDTO> estilistas = new ArrayList<>();
+        String sql = "SELECT e.id_empleado, e.nombre, e.puesto AS especialidad, u.email, e.activo " +
+                     "FROM empleado e " +
+                     "JOIN usuario u ON e.id_usuario = u.id_usuario " +
+                     "JOIN estilista_servicio es ON e.id_empleado = es.id_estilista " +
+                     "WHERE es.id_servicio = ? AND e.activo = TRUE AND u.id_rol = 2";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idServicio);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    EstilistaDTO dto = new EstilistaDTO();
+                    dto.setIdEstilista(rs.getInt("id_empleado"));
+                    dto.setNombre(rs.getString("nombre"));
+                    dto.setEspecialidad(rs.getString("especialidad"));
+                    dto.setEmail(rs.getString("email"));
+                    dto.setActivo(rs.getBoolean("activo"));
+                    estilistas.add(dto);
+                }
+            }
+        }
+        return estilistas;
+    }
 }

@@ -12,97 +12,74 @@ import java.util.List;
 public class CitaService {
 
     private final CitaRepository citaRepository;
-    private final List<String> ESTADOS_VALIDOS = Arrays.asList("PENDIENTE", "CONFIRMADA", "CANCELADA", "COMPLETADA");
+    private final List<String> ESTADOS_VALIDOS = Arrays.asList("PENDIENTE", "CONFIRMADA", "COMPLETADA", "CANCELADA", "NO_ASISTIO");
 
+    // CORRECCIÓN: Añadido constructor para inyección de dependencias
     public CitaService(CitaRepository citaRepository) {
         this.citaRepository = citaRepository;
     }
 
-    public List<CitaDTO> findAll() throws SQLException {
-        return citaRepository.findAllCitas();
+    public List<CitaDTO> findAll(String estado, String fecha) throws SQLException {
+        return citaRepository.findAll(estado, fecha);
     }
 
     public CitaDTO findById(int id) throws SQLException {
-        return citaRepository.findCitaById(id);
+        return citaRepository.findById(id);
     }
 
     public List<CitaDTO> findByCliente(int idCliente) throws SQLException {
-        return citaRepository.findCitaCliente(idCliente);
+        return citaRepository.findByCliente(idCliente);
     }
 
     public List<CitaDTO> findByEstilista(int idEstilista) throws SQLException {
         return citaRepository.findByEstilista(idEstilista);
     }
 
-    public List<CitaDTO> findByEstado(String estado) throws SQLException, IllegalArgumentException {
-        if (estado == null || !ESTADOS_VALIDOS.contains(estado.toUpperCase())) {
-            throw new IllegalArgumentException("Estado de cita no válido. Los estados permitidos son: " + String.join(", ", ESTADOS_VALIDOS));
+    public List<CitaDTO> findByMonth(int mes, int anio) throws SQLException {
+        if (mes < 1 || mes > 12 || anio < 2000) {
+            throw new IllegalArgumentException("Mes o año inválido.");
         }
-        return citaRepository.findByEstado(estado.toUpperCase());
+        return citaRepository.findByMonth(mes, anio);
     }
 
-    public List<CitaDTO> findCitasMes(int mes, int anio) throws SQLException, IllegalArgumentException {
-        if (mes < 1 || mes > 12) {
-            throw new IllegalArgumentException("El mes debe estar entre 1 y 12.");
+    public Cita create(Cita cita, List<Integer> servicios) throws SQLException {
+        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) { // Corrected to getFechaHoraCita
+            throw new IllegalArgumentException("No se puede agendar una cita en el pasado.");
         }
-        if (anio < 2020 || anio > 2100) {
-            throw new IllegalArgumentException("El año no es válido.");
+        if (servicios == null || servicios.isEmpty()) {
+            throw new IllegalArgumentException("La cita debe tener al menos un servicio.");
         }
-        return citaRepository.findCitasMes(mes, anio);
-    }
-
-    public int create(Cita cita) throws SQLException, IllegalArgumentException {
-        if (cita.getFechaCita() == null || cita.getFechaCita().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("La fecha de la cita no puede ser en el pasado.");
-        }
-        if (cita.getIdCliente() <= 0 || cita.getIdEstilista() <= 0 || cita.getIdHorario() <= 0) {
-            throw new IllegalArgumentException("Los IDs de cliente, estilista y horario son obligatorios y deben ser mayores a 0.");
-        }
-        if (cita.getServicios() == null || cita.getServicios().isEmpty()) {
-            throw new IllegalArgumentException("La cita debe tener al menos un servicio asociado.");
-        }
-
         cita.setEstadoCita("PENDIENTE");
-        cita.setFechaSolicitudCita(LocalDateTime.now());
-
-        return citaRepository.save(cita);
+        return citaRepository.save(cita, servicios);
     }
 
-    public boolean update(int id, Cita cita) throws SQLException, IllegalArgumentException {
-        CitaDTO citaExistente = findById(id);
-        if (citaExistente == null) {
-            return false; // Indica que no se encontró para que el controlador devuelva 404
+    public boolean update(int id, Cita cita) throws SQLException {
+        CitaDTO existente = citaRepository.findById(id);
+        if (existente == null) {
+            return false; // No encontrado
         }
-
-        if (cita.getFechaCita() == null || cita.getFechaCita().isBefore(LocalDateTime.now())) {
+        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) { // Corrected to getFechaHoraCita
             throw new IllegalArgumentException("La fecha de la cita no puede ser en el pasado.");
         }
-        if (cita.getIdEstilista() <= 0 || cita.getIdHorario() <= 0) {
-            throw new IllegalArgumentException("Los IDs de estilista y horario son obligatorios.");
-        }
-
         cita.setIdCita(id);
         return citaRepository.update(cita);
     }
 
-    public boolean updateEstado(int id, String estado) throws SQLException, IllegalArgumentException {
-        CitaDTO citaExistente = findById(id);
-        if (citaExistente == null) {
-            return false; // Indica que no se encontró
+    public boolean updateEstado(int id, String estado) throws SQLException {
+        if (!ESTADOS_VALIDOS.contains(estado.toUpperCase())) {
+            throw new IllegalArgumentException("Estado de cita no válido.");
         }
-
-        String upperCaseEstado = estado.toUpperCase();
-        if (!ESTADOS_VALIDOS.contains(upperCaseEstado)) {
-            throw new IllegalArgumentException("Estado de cita no válido. Los estados permitidos son: " + String.join(", ", ESTADOS_VALIDOS));
+        CitaDTO existente = citaRepository.findById(id);
+        if (existente == null) {
+            return false; // No encontrado
         }
-
-        return citaRepository.updateEstado(id, upperCaseEstado);
+        return citaRepository.updateEstado(id, estado.toUpperCase());
     }
 
     public boolean delete(int id) throws SQLException {
-        CitaDTO citaExistente = findById(id);
-        if (citaExistente == null) {
-            return false; // Indica que no se encontró
+        CitaDTO existente = citaRepository.findById(id);
+        if (existente == null) {
+            return false; // No encontrado
         }
         return citaRepository.delete(id);
     }

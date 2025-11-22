@@ -17,14 +17,9 @@ public class UsuarioRouter implements IRouter {
         app.post("/api/register", usuarioController::register);
         app.post("/api/login", usuarioController::login);
 
-        // Rutas para la gestión de usuarios
+        // Rutas para la gestión de usuarios (CRUD)
         app.get("/api/usuarios/{id}", usuarioController::getById);
         app.put("/api/usuarios/{id}", usuarioController::updateUser);
         app.delete("/api/usuarios/{id}", usuarioController::deleteUser);
-
-        // Rutas para la gestión completa de empleados (que incluye un usuario)
-        // Estas rutas son más específicas y es mejor mantenerlas separadas.
-        app.post("/api/empleados/completo", usuarioController::registrarEmpleadoCompleto);
-        app.put("/api/empleados/completo", usuarioController::updateEmpleadoCompleto);
     }
 }

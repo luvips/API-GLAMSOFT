@@ -2,15 +2,14 @@ package org.pi.Models;
 
 public class Estilista extends Empleado {
     private int idHorario;
-    private int idServicio;
 
     public Estilista() {
+        super();
     }
 
-    public Estilista(int idUsuario, String email, String password, int idRol, String nombre, String telefono, int idEmpleado, String imagenPerfil, int idHorario, int idServicio) {
-        super(idUsuario, email, password, idRol, nombre, telefono, idEmpleado, imagenPerfil);
+    public Estilista(int idUsuario, String nombre, String email, String telefono, String password, int idRol, boolean activo, int idEmpleado, String puesto, String imagenPerfil, int idHorario) {
+        super(idUsuario, nombre, email, telefono, password, idRol, activo, idEmpleado, puesto, imagenPerfil);
         this.idHorario = idHorario;
-        this.idServicio = idServicio;
     }
 
     public int getIdHorario() {
@@ -19,13 +18,5 @@ public class Estilista extends Empleado {
 
     public void setIdHorario(int idHorario) {
         this.idHorario = idHorario;
-    }
-
-    public int getIdServicio() {
-        return idServicio;
-    }
-
-    public void setIdServicio(int idServicio) {
-        this.idServicio = idServicio;
     }
 }

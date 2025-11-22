@@ -3,108 +3,130 @@ package org.pi.Controllers;
 import io.javalin.http.Context;
 import org.pi.Models.Pregunta;
 import org.pi.Services.PreguntaService;
+import org.pi.dto.PreguntaDTO;
 
 import java.sql.SQLException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class PreguntaController {
-
     private final PreguntaService preguntaService;
 
     public PreguntaController(PreguntaService preguntaService) {
         this.preguntaService = preguntaService;
     }
 
-    public void findPreFormulario(Context ctx){
-        try{
-            int id = Integer.parseInt(ctx.pathParam("id"));
-            List<Pregunta> preguntas = preguntaService.findPreFormulario(id);
-            ctx.status(200).json(preguntas);
-        } catch (SQLException e) {
-            ctx.status(500).result("Error al obtener las preguntas: " + e.getMessage());
-        }
-    }
-    public void findFormularioServicio(Context ctx) {
-        try{
-            int id = Integer.parseInt(ctx.pathParam("id"));
-            List<Pregunta> preguntas = preguntaService.findFormularioServicio(id);
-            ctx.status(200).json(preguntas);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public void findAll(Context ctx) {
+    public void getAll(Context ctx) {
         try {
-            List<Pregunta> preguntas = preguntaService.findAll();
-            ctx.status(200).json(preguntas);
+            List<PreguntaDTO> preguntas = preguntaService.findAll();
+            successResponse(ctx, 200, "Preguntas recuperadas", preguntas);
         } catch (SQLException e) {
-            ctx.status(500).result("Error al obtener las preguntas: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
-    public void findById(Context ctx) {
+    public void getById(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            Pregunta pregunta = preguntaService.find(id);
-            ctx.status(200).json(pregunta);
+            PreguntaDTO pregunta = preguntaService.findById(id);
+            if (pregunta == null) {
+                errorResponse(ctx, 404, "Pregunta no encontrada.");
+                return;
+            }
+            successResponse(ctx, 200, "Pregunta encontrada", pregunta);
         } catch (NumberFormatException e) {
-            ctx.status(400).result("El ID debe ser un número válido.");
-        } catch (IllegalArgumentException e) {
-            ctx.status(400).result(e.getMessage());
+            errorResponse(ctx, 400, "ID de pregunta inválido.");
         } catch (SQLException e) {
-            ctx.status(500).result("Error en la base de datos: " + e.getMessage());
-        } catch (Exception e) {
-            ctx.status(404).result(e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
 
-    public void savePregunta(Context ctx) {
+    public void create(Context ctx) {
         try {
             Pregunta pregunta = ctx.bodyAsClass(Pregunta.class);
-            int idGenerado = preguntaService.save(pregunta);
-            ctx.status(201).result("Pregunta creada con ID: " + idGenerado);
-        } catch (IllegalArgumentException e) {
-            ctx.status(400).result("Error de validación: " + e.getMessage());
+            if (pregunta.getPregunta() == null || pregunta.getPregunta().trim().isEmpty()) {
+                errorResponse(ctx, 400, "El texto de la pregunta es obligatorio.");
+                return;
+            }
+
+            Pregunta preguntaCreada = preguntaService.create(pregunta);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("idPregunta", preguntaCreada.getIdPregunta());
+            data.put("pregunta", preguntaCreada.getPregunta());
+
+            successResponse(ctx, 201, "Pregunta creada exitosamente", data);
         } catch (SQLException e) {
-            ctx.status(500).result("Error al guardar la pregunta: " + e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
-    public void updatePregunta(Context ctx) {
+    public void update(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
             Pregunta pregunta = ctx.bodyAsClass(Pregunta.class);
-            pregunta.setIdPregunta(id);
-            preguntaService.update(pregunta);
-            ctx.status(200).result("Pregunta actualizada correctamente.");
+            
+            if (preguntaService.findById(id) == null) {
+                errorResponse(ctx, 404, "Pregunta no encontrada para actualizar.");
+                return;
+            }
+            if (pregunta.getRespuesta() == null) {
+                errorResponse(ctx, 400, "El campo 'respuesta' es obligatorio para actualizar.");
+                return;
+            }
+
+            if (preguntaService.update(id, pregunta)) {
+                successResponse(ctx, 200, "Pregunta actualizada exitosamente", null);
+            } else {
+                errorResponse(ctx, 500, "No se pudo actualizar la pregunta.");
+            }
         } catch (NumberFormatException e) {
-        ctx.status(400).result("El ID debe ser un número válido." + e.getMessage());
-        } catch (IllegalArgumentException e) {
-      
-        ctx.status(400).result("Error de validacion: " + e.getMessage());
-        } catch (NoSuchElementException e) {
-        ctx.status(404).result("Error: " + e.getMessage());
-         } catch (SQLException e) {
-        ctx.status(500).result("Error en la base de datos: " + e.getMessage());
+            errorResponse(ctx, 400, "ID de pregunta inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
-        ctx.status(500).result("Error interno del servidor: " + e.getMessage());
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
-    public void deletePregunta(Context ctx) {
+    public void delete(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            preguntaService.delete(id);
-            ctx.status(200).result("Pregunta eliminada correctamente.");
+            if (preguntaService.findById(id) == null) {
+                errorResponse(ctx, 404, "Pregunta no encontrada para eliminar.");
+                return;
+            }
+            if (preguntaService.delete(id)) {
+                successResponse(ctx, 200, "Pregunta eliminada exitosamente", null);
+            } else {
+                errorResponse(ctx, 500, "No se pudo eliminar la pregunta.");
+            }
         } catch (NumberFormatException e) {
-            ctx.status(400).result("El ID debe ser un número válido.");
-        } catch (IllegalArgumentException e) {
-            ctx.status(400).result(e.getMessage());
+            errorResponse(ctx, 400, "ID de pregunta inválido.");
         } catch (SQLException e) {
-            ctx.status(500).result("Error al eliminar la pregunta: " + e.getMessage());
-        } catch (Exception e) {
-            ctx.status(404).result(e.getMessage());
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
+    }
+
+    // --- Métodos de ayuda ---
+
+    private void successResponse(Context ctx, int statusCode, String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", message);
+        if (data != null) {
+            response.put("data", data);
+        }
+        ctx.status(statusCode).json(response);
+    }
+
+    private void errorResponse(Context ctx, int statusCode, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", message);
+        ctx.status(statusCode).json(response);
     }
 }
-
