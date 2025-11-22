@@ -29,11 +29,7 @@ public class CitaController {
                 citas = citaService.findAll();
             }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", citas);
-            response.put("message", "Citas recuperadas correctamente");
-            ctx.status(200).json(response);
+            successResponse(ctx, 200, "Citas recuperadas correctamente", citas);
 
         } catch (IllegalArgumentException e) {
             errorResponse(ctx, 400, e.getMessage());
@@ -52,11 +48,7 @@ public class CitaController {
                 return;
             }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", cita);
-            response.put("message", "Cita encontrada");
-            ctx.status(200).json(response);
+            successResponse(ctx, 200, "Cita encontrada", cita);
 
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
@@ -70,11 +62,7 @@ public class CitaController {
             int idCliente = Integer.parseInt(ctx.pathParam("idCliente"));
             List<CitaDTO> citas = citaService.findByCliente(idCliente);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", citas);
-            response.put("message", "Citas del cliente recuperadas correctamente");
-            ctx.status(200).json(response);
+            successResponse(ctx, 200, "Citas del cliente recuperadas correctamente", citas);
 
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El ID del cliente debe ser un número válido");
@@ -88,11 +76,7 @@ public class CitaController {
             int idEstilista = Integer.parseInt(ctx.pathParam("idEstilista"));
             List<CitaDTO> citas = citaService.findByEstilista(idEstilista);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", citas);
-            response.put("message", "Citas del estilista recuperadas correctamente");
-            ctx.status(200).json(response);
+            successResponse(ctx, 200, "Citas del estilista recuperadas correctamente", citas);
 
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El ID del estilista debe ser un número válido");
@@ -107,11 +91,7 @@ public class CitaController {
             int year = Integer.parseInt(ctx.pathParam("year"));
             List<CitaDTO> citas = citaService.findCitasMes(mes, year);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", citas);
-            response.put("message", "Citas del mes recuperadas correctamente");
-            ctx.status(200).json(response);
+            successResponse(ctx, 200, "Citas del mes recuperadas correctamente", citas);
 
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El mes y el año deben ser números válidos");
@@ -127,14 +107,7 @@ public class CitaController {
             Cita nuevaCita = ctx.bodyAsClass(Cita.class);
             int idGenerado = citaService.create(nuevaCita);
 
-            Map<String, Object> data = new HashMap<>();
-            data.put("id", idGenerado);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("data", data);
-            response.put("message", "Cita creada exitosamente");
-            ctx.status(201).json(response);
+            successResponse(ctx, 201, "Cita creada exitosamente", Map.of("id", idGenerado));
 
         } catch (IllegalArgumentException e) {
             errorResponse(ctx, 400, e.getMessage());
@@ -155,11 +128,7 @@ public class CitaController {
                 return;
             }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Cita actualizada correctamente");
-            ctx.status(200).json(response);
-
+            successResponse(ctx, 200, "Cita actualizada correctamente", null);
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
         } catch (IllegalArgumentException e) {
@@ -187,11 +156,7 @@ public class CitaController {
                 return;
             }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Estado de la cita actualizado correctamente");
-            ctx.status(200).json(response);
-
+            successResponse(ctx, 200, "Estado de la cita actualizado correctamente", null);
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
         } catch (IllegalArgumentException e) {
@@ -211,11 +176,7 @@ public class CitaController {
                 return;
             }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Cita eliminada correctamente");
-            ctx.status(200).json(response);
-
+            successResponse(ctx, 200, "Cita eliminada correctamente", null);
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "El ID de la cita debe ser un número válido");
         } catch (SQLException e) {
@@ -223,6 +184,16 @@ public class CitaController {
         }
     }
 
+    // --- Métodos de ayuda para respuestas ---
+    private void successResponse(Context ctx, int statusCode, String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", message);
+        if (data != null) {
+            response.put("data", data);
+        }
+        ctx.status(statusCode).json(response);
+    }
     private void errorResponse(Context ctx, int statusCode, String message) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);

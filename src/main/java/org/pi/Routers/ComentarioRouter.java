@@ -1,20 +1,26 @@
 package org.pi.Routers;
 
 import io.javalin.Javalin;
+import org.pi.Config.IRouter;
 import org.pi.Controllers.ComentarioController;
 
-public class ComentarioRouter {
+public class ComentarioRouter implements IRouter {
     private final ComentarioController comentarioController;
 
-    public ComentarioRouter(ComentarioController comentarioController) {
-        this.comentarioController = comentarioController;
+    public ComentarioRouter(ComentarioController controller) {
+        this.comentarioController = controller;
     }
 
-    public void register(Javalin app){
-        app.get("/comentarios",comentarioController::findALL);
-        app.post("/comentarios",comentarioController::saveComentario);
-        app.delete("/comentarios/{id}",comentarioController::deleteComentario);
-        app.get("/comentarios/clientes/{id}",comentarioController::HistorialComen);
-        app.get("/comentarios/fecha",comentarioController::find8comen);//muestra los ultimos 8 comentarios
+    @Override
+    public void register(Javalin app) {
+        // Rutas CRUD estándar para Comentarios
+        app.get("/api/comentarios", comentarioController::getAll);
+        app.post("/api/comentarios", comentarioController::create);
+        app.get("/api/comentarios/{id}", comentarioController::getById);
+        app.put("/api/comentarios/{id}", comentarioController::update);
+        app.delete("/api/comentarios/{id}", comentarioController::delete);
+
+        // Ruta específica para obtener comentarios de un cliente
+        app.get("/api/comentarios/cliente/{idCliente}", comentarioController::getByCliente);
     }
 }

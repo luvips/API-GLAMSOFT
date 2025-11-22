@@ -5,7 +5,6 @@ import org.pi.Repositories.ComentarioRepository;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class ComentarioService {
     private final ComentarioRepository comentarioRepository;
@@ -14,36 +13,33 @@ public class ComentarioService {
         this.comentarioRepository = comentarioRepository;
     }
 
-    public List<Comentario> HistorialComen(int idClient)throws SQLException{
-        return comentarioRepository.findComenClien(idClient);
-    }
-    public List<Comentario> find8Comen()throws SQLException{
-        return comentarioRepository.find8Comen();
-    }
-
-    public List<Comentario> findAllC()throws SQLException{
+    public List<Comentario> findAll() throws SQLException {
         return comentarioRepository.findAll();
     }
 
-
-    public int saveC(Comentario comentario)throws SQLException{
-        String texto = comentario.getComentario();
-        if (texto != null){
-            return comentarioRepository.save(comentario);
-        }
-       return 0;
+    public Comentario findById(int id) throws SQLException {
+        return comentarioRepository.findById(id);
     }
 
-    public void deleteC(int id)throws SQLException{
-        if (id <= 0){
-            throw new IllegalArgumentException("La id debe ser mayor a cero");
-        }
-        Comentario existe = comentarioRepository.findById(id);
-        if (existe == null){
-            throw new NoSuchElementException("No se puede eliminar: comentario inexistente");
-        }
-        comentarioRepository.delete(id);
+    public List<Comentario> findByCliente(int idCliente) throws SQLException {
+        return comentarioRepository.findComentariosByCliente(idCliente);
     }
 
+    public List<Comentario> findLatest(int limit) throws SQLException {
+        return comentarioRepository.findLatest(limit);
+    }
 
+    public int create(Comentario comentario) throws SQLException {
+        // Las validaciones de datos se manejan en el controlador.
+        return comentarioRepository.save(comentario);
+    }
+
+    public boolean update(int id, Comentario comentario) throws SQLException {
+        comentario.setIdComentario(id);
+        return comentarioRepository.update(comentario);
+    }
+
+    public boolean delete(int id) throws SQLException {
+        return comentarioRepository.delete(id);
+    }
 }
