@@ -13,8 +13,6 @@ public class CitaRouter implements IRouter {
 
     @Override
     public void register(Javalin app) {
-        // CORRECCIÓN: Volviendo al método original de registro de rutas directas.
-        // Esto es consistente con la arquitectura del proyecto y evita los errores.
         app.get("/api/citas", citaController::getAll);
         app.post("/api/citas", citaController::create);
         app.get("/api/citas/{id}", citaController::getById);
