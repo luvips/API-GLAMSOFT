@@ -43,6 +43,7 @@ public class Main {
             configModule.initRolRouter().register(app);
             configModule.initServicioRouter().register(app);
             configModule.initValoracionRouter().register(app);
+            configModule.initNotificacionRouter().register(app); // <-- LÍNEA AÑADIDA
 
             // Endpoint de documentación
             app.get("/api/docs", ctx -> {
