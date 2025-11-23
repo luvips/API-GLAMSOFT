@@ -20,7 +20,6 @@ public class UsuarioRepository {
     }
 
     public Usuario findUserById(int id) throws SQLException {
-        // Buscamos por ID sin importar si está activo (para admins)
         String sql = "SELECT * FROM usuario WHERE id_usuario = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -49,7 +48,6 @@ public class UsuarioRepository {
     }
 
     public Usuario findUserByTelefono(String telefono) throws SQLException {
-        // Para login/registro validamos que no exista, o recuperamos activo
         String sql = "SELECT * FROM usuario WHERE telefono = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -63,7 +61,6 @@ public class UsuarioRepository {
         return null;
     }
 
-    // ✅ MÉTODO CORREGIDO CON TRANSACCIÓN
     public Usuario saveUser(Usuario usuario) throws SQLException {
         String sql = "INSERT INTO usuario(nombre, email, telefono, password, id_rol) VALUES(?,?,?,?,?)";
 
@@ -73,7 +70,6 @@ public class UsuarioRepository {
 
         try {
             conn = DBconfig.getDataSource().getConnection();
-            // 1. Iniciar Transacción
             conn.setAutoCommit(false);
 
             stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -95,12 +91,10 @@ public class UsuarioRepository {
                 throw new SQLException("No se encontró el ID generado para el usuario.");
             }
 
-            // 2. Confirmar Transacción (Todo salió bien)
             conn.commit();
             return usuario;
 
         } catch (SQLException e) {
-            // 3. Deshacer cambios si algo falla (Rollback)
             if (conn != null) {
                 try {
                     conn.rollback();
@@ -108,14 +102,13 @@ public class UsuarioRepository {
                     ex.printStackTrace();
                 }
             }
-            throw e; // Relanzar el error original
+            throw e;
         } finally {
-            // 4. Cerrar recursos manualmente
             if (claves != null) try { claves.close(); } catch (SQLException e) { e.printStackTrace(); }
             if (stmt != null) try { stmt.close(); } catch (SQLException e) { e.printStackTrace(); }
             if (conn != null) {
                 try {
-                    conn.setAutoCommit(true); // Restaurar estado por defecto
+                    conn.setAutoCommit(true);
                     conn.close();
                 } catch (SQLException e) { e.printStackTrace(); }
             }
@@ -123,14 +116,16 @@ public class UsuarioRepository {
     }
 
     public boolean updateUser(Usuario usuario) throws SQLException {
-        String sql = "UPDATE usuario SET nombre = ?, email = ?, telefono = ?, id_rol = ? WHERE id_usuario = ?";
+        // ✅ CORRECCIÓN: Se agregó "password = ?" a la consulta SQL
+        String sql = "UPDATE usuario SET nombre = ?, email = ?, telefono = ?, password = ?, id_rol = ? WHERE id_usuario = ?";
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, usuario.getNombre());
             stmt.setString(2, usuario.getEmail());
             stmt.setString(3, usuario.getTelefono());
-            stmt.setInt(4, usuario.getIdRol());
-            stmt.setInt(5, usuario.getIdUsuario());
+            stmt.setString(4, usuario.getPassword()); // ✅ Se envía la contraseña
+            stmt.setInt(5, usuario.getIdRol());
+            stmt.setInt(6, usuario.getIdUsuario());
             return stmt.executeUpdate() > 0;
         }
     }

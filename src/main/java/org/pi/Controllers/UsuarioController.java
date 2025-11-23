@@ -4,6 +4,7 @@ import io.javalin.http.Context;
 import org.pi.Models.Usuario;
 import org.pi.Services.UsuarioService;
 import com.password4j.Password;
+
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,60 +23,47 @@ public class UsuarioController {
 
     public void register(Context ctx) {
         try {
-            System.out.println("Iniciando registro..."); // Log para depuración
             Usuario usuario = ctx.bodyAsClass(Usuario.class);
 
-            // 1. Validaciones básicas
             if (usuario.getNombre() == null || usuario.getTelefono() == null || usuario.getEmail() == null || usuario.getPassword() == null) {
-                errorResponse(ctx, 400, "Todos los campos son obligatorios.");
+                errorResponse(ctx, 400, "Nombre, teléfono, email y contraseña son obligatorios.");
                 return;
             }
-
             if (!EMAIL_PATTERN.matcher(usuario.getEmail()).matches()) {
-                errorResponse(ctx, 400, "Email inválido.");
+                errorResponse(ctx, 400, "El formato del email no es válido.");
+                return;
+            }
+            if (usuario.getPassword().length() < 8) {
+                errorResponse(ctx, 400, "La contraseña debe tener al menos 8 caracteres.");
+                return;
+            }
+            if (usuarioService.findUserByEmail(usuario.getEmail()) != null || usuarioService.findUserByTelefono(usuario.getTelefono()) != null) {
+                errorResponse(ctx, 409, "El email o teléfono ya están registrados.");
                 return;
             }
 
-            // 2. Verificar duplicados
-            if (usuarioService.findUserByEmail(usuario.getEmail()) != null) {
-                errorResponse(ctx, 409, "El email ya está registrado.");
-                return;
-            }
-            if (usuarioService.findUserByTelefono(usuario.getTelefono()) != null) {
-                errorResponse(ctx, 409, "El teléfono ya está registrado.");
-                return;
-            }
-
-            // 3. Preparar usuario
             usuario.setPassword(Password.hash(usuario.getPassword()).withBcrypt().getResult());
 
-            // Lógica de Rol: Si no envían rol, es 3 (Cliente). Si envían 1, es Admin.
             if (usuario.getIdRol() == 0) {
                 usuario.setIdRol(3);
             }
 
-            // 4. Guardar en BD
             Usuario usuarioCreado = usuarioService.saveUser(usuario);
 
-            System.out.println("Usuario guardado ID: " + usuarioCreado.getIdUsuario()); // Log
-
-            // 5. Construir respuesta
             Map<String, Object> data = new HashMap<>();
             data.put("idUsuario", usuarioCreado.getIdUsuario());
             data.put("nombre", usuarioCreado.getNombre());
+            data.put("telefono", usuarioCreado.getTelefono());
             data.put("email", usuarioCreado.getEmail());
-            // Enviamos el rol real para que el frontend sepa qué hacer
             data.put("idRol", usuarioCreado.getIdRol());
-            data.put("rol", usuarioCreado.getIdRol() == 1 ? "Admin" : "Cliente");
+            data.put("rol", usuarioCreado.getIdRol() == 1 ? "Admin" : (usuarioCreado.getIdRol() == 2 ? "Estilista" : "Cliente"));
 
             successResponse(ctx, 201, "Usuario registrado exitosamente", data);
 
         } catch (SQLException e) {
-            e.printStackTrace(); // Ver error en consola del servidor
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace(); // Ver error en consola del servidor
-            errorResponse(ctx, 400, "Error en la solicitud: " + e.getMessage());
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
@@ -108,10 +96,10 @@ public class UsuarioController {
                 Map<String, Object> usuarioData = new HashMap<>();
                 usuarioData.put("idUsuario", userFromDB.getIdUsuario());
                 usuarioData.put("nombre", userFromDB.getNombre());
+                usuarioData.put("telefono", userFromDB.getTelefono());
                 usuarioData.put("email", userFromDB.getEmail());
-                // Enviamos el rol real de la BD
                 usuarioData.put("idRol", userFromDB.getIdRol());
-                usuarioData.put("rol", userFromDB.getIdRol() == 1 ? "Admin" : "Cliente");
+                usuarioData.put("rol", userFromDB.getIdRol() == 1 ? "Admin" : (userFromDB.getIdRol() == 2 ? "Estilista" : "Cliente"));
 
                 Map<String, Object> data = new HashMap<>();
                 data.put("token", token);
@@ -127,11 +115,6 @@ public class UsuarioController {
         }
     }
 
-    // ... (Mantén los métodos getById, updateUser, deleteUser, etc. si los necesitas, o pégalos del archivo anterior)
-
-    // --- Métodos de ayuda ---
-    // IMPORTANTE: Asegúrate de que estos métodos estén al final de la clase
-
     public void getById(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
@@ -141,7 +124,6 @@ public class UsuarioController {
                 return;
             }
 
-            // Crear un mapa para la respuesta para controlar qué datos enviamos
             Map<String, Object> data = new HashMap<>();
             data.put("idUsuario", usuario.getIdUsuario());
             data.put("nombre", usuario.getNombre());
@@ -170,6 +152,14 @@ public class UsuarioController {
             if (dataToUpdate.getNombre() != null) usuarioExistente.setNombre(dataToUpdate.getNombre());
             if (dataToUpdate.getEmail() != null) usuarioExistente.setEmail(dataToUpdate.getEmail());
             if (dataToUpdate.getTelefono() != null) usuarioExistente.setTelefono(dataToUpdate.getTelefono());
+
+            // ✅ CORRECCIÓN: Actualizar contraseña si se envía
+            if (dataToUpdate.getPassword() != null && !dataToUpdate.getPassword().trim().isEmpty()) {
+                // Encriptar la nueva contraseña
+                String hashedPassword = Password.hash(dataToUpdate.getPassword()).withBcrypt().getResult();
+                usuarioExistente.setPassword(hashedPassword);
+            }
+
             if (dataToUpdate.getIdRol() != 0) usuarioExistente.setIdRol(dataToUpdate.getIdRol());
 
             if (usuarioService.updateUser(usuarioExistente)) {
