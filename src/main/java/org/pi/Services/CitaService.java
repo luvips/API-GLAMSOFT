@@ -14,7 +14,6 @@ public class CitaService {
     private final CitaRepository citaRepository;
     private final List<String> ESTADOS_VALIDOS = Arrays.asList("PENDIENTE", "CONFIRMADA", "COMPLETADA", "CANCELADA", "NO_ASISTIO");
 
-    // CORRECCIÓN: Añadido constructor para inyección de dependencias
     public CitaService(CitaRepository citaRepository) {
         this.citaRepository = citaRepository;
     }
@@ -42,30 +41,44 @@ public class CitaService {
         return citaRepository.findByMonth(mes, anio);
     }
 
-    public Cita create(Cita cita, List<Integer> servicios) throws SQLException {
-        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) { // Corrected to getFechaHoraCita
+    public Cita create(Cita cita, List<Integer> servicios) throws SQLException, IllegalArgumentException {
+        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("No se puede agendar una cita en el pasado.");
         }
         if (servicios == null || servicios.isEmpty()) {
             throw new IllegalArgumentException("La cita debe tener al menos un servicio.");
         }
+
+        // Nueva validación de disponibilidad
+        boolean disponible = citaRepository.isEstilistaDisponible(cita.getIdEstilista(), cita.getFechaHoraCita());
+        if (!disponible) {
+            throw new IllegalArgumentException("El estilista no está disponible en la fecha y hora seleccionadas.");
+        }
+
         cita.setEstadoCita("PENDIENTE");
         return citaRepository.save(cita, servicios);
     }
 
-    public boolean update(int id, Cita cita) throws SQLException {
+    public boolean update(int id, Cita cita) throws SQLException, IllegalArgumentException {
         CitaDTO existente = citaRepository.findById(id);
         if (existente == null) {
             return false; // No encontrado
         }
-        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) { // Corrected to getFechaHoraCita
+        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("La fecha de la cita no puede ser en el pasado.");
         }
+        
+        // Nueva validación de disponibilidad
+        boolean disponible = citaRepository.isEstilistaDisponible(cita.getIdEstilista(), cita.getFechaHoraCita());
+        if (!disponible) {
+            throw new IllegalArgumentException("El estilista no está disponible en la nueva fecha y hora seleccionadas.");
+        }
+
         cita.setIdCita(id);
         return citaRepository.update(cita);
     }
 
-    public boolean updateEstado(int id, String estado) throws SQLException {
+    public boolean updateEstado(int id, String estado) throws SQLException, IllegalArgumentException {
         if (!ESTADOS_VALIDOS.contains(estado.toUpperCase())) {
             throw new IllegalArgumentException("Estado de cita no válido.");
         }

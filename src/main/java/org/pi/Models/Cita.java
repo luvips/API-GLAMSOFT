@@ -1,5 +1,4 @@
 package org.pi.Models;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,7 +10,7 @@ public class Cita {
     private String notas;
     private int idCliente;
     private int idEstilista;
-    private int idHorario;
+    // idHorario ha sido eliminado
     private List<Integer> servicios;
 
     //CONSTRUCTORES
@@ -19,7 +18,7 @@ public class Cita {
     }
 
     public Cita(int idCita, String estadoCita, LocalDateTime fechaHoraCita,
-                LocalDateTime fechaSolicitudCita, String notas, int idCliente, int idEstilista, int idHorario, List<Integer> servicios) {
+                LocalDateTime fechaSolicitudCita, String notas, int idCliente, int idEstilista, List<Integer> servicios) {
         this.idCita = idCita;
         this.estadoCita = estadoCita;
         this.fechaHoraCita = fechaHoraCita;
@@ -27,12 +26,10 @@ public class Cita {
         this.notas = notas;
         this.idCliente = idCliente;
         this.idEstilista = idEstilista;
-        this.idHorario = idHorario;
         this.servicios = servicios;
     }
 
     //GETTERS AND SETTERS
-
 
     public int getIdCita() {
         return idCita;
@@ -88,14 +85,6 @@ public class Cita {
 
     public void setIdEstilista(int idEstilista) {
         this.idEstilista = idEstilista;
-    }
-
-    public int getIdHorario() {
-        return idHorario;
-    }
-
-    public void setIdHorario(int idHorario) {
-        this.idHorario = idHorario;
     }
 
     public List<Integer> getServicios() {
