@@ -91,7 +91,7 @@ public class UsuarioController {
                 usuarioData.put("telefono", userFromDB.getTelefono());
                 usuarioData.put("email", userFromDB.getEmail());
                 usuarioData.put("idRol", userFromDB.getIdRol());
-
+//a
                 Map<String, Object> data = new HashMap<>();
                 data.put("token", token);
                 data.put("usuario", usuarioData);
