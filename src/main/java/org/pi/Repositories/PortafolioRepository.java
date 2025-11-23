@@ -12,13 +12,14 @@ public class PortafolioRepository {
 
     private PortafolioDTO mapResultSetToDTO(ResultSet rs) throws SQLException {
         PortafolioDTO dto = new PortafolioDTO();
-        dto.setIdPortafolio(rs.getInt("id_imagen"));
+        // CAMBIO: setIdPortafolio -> setIdImagen
+        dto.setIdImagen(rs.getInt("id_imagen"));
         dto.setTitulo(rs.getString("titulo"));
         dto.setDescripcion(rs.getString("descripcion"));
         dto.setUrlImagen(rs.getString("url"));
         dto.setFecha(rs.getTimestamp("fecha_creacion").toLocalDateTime());
         dto.setDestacado(rs.getBoolean("destacado"));
-        
+
         if (hasColumn(rs, "nombre_categoria")) {
             dto.setCategoria(rs.getString("nombre_categoria"));
         }
@@ -82,12 +83,20 @@ public class PortafolioRepository {
     }
 
     public boolean update(Portafolio portafolio) throws SQLException {
-        String sql = "UPDATE portafolio SET titulo = ?, destacado = ? WHERE id_imagen = ?";
+        // CORRECCIÓN: Agregar descripcion, url, e id_categoria al SQL
+        String sql = "UPDATE portafolio SET titulo = ?, descripcion = ?, url = ?, id_categoria = ?, destacado = ? WHERE id_imagen = ?";
+
         try (Connection conn = DBconfig.getDataSource().getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+
             stmt.setString(1, portafolio.getTitulo());
-            stmt.setBoolean(2, portafolio.isDestacado());
-            stmt.setInt(3, portafolio.getIdImagen());
+            stmt.setString(2, portafolio.getDescripcion());
+            stmt.setString(3, portafolio.getUrl());
+            // Usar setObject para manejar posibles nulos en categoría, aunque tu front envía 1 por defecto
+            stmt.setObject(4, portafolio.getIdCategoria());
+            stmt.setBoolean(5, portafolio.isDestacado());
+            stmt.setInt(6, portafolio.getIdImagen());
+
             return stmt.executeUpdate() > 0;
         }
     }

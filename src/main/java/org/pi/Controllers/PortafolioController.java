@@ -53,9 +53,9 @@ public class PortafolioController {
             }
 
             Portafolio portafolioCreado = portafolioService.create(portafolio);
-            
+
             Map<String, Object> data = new HashMap<>();
-            data.put("idPortafolio", portafolioCreado.getIdImagen());
+            data.put("idImagen", portafolioCreado.getIdImagen());
             data.put("titulo", portafolioCreado.getTitulo());
             data.put("fecha", LocalDateTime.now().toString());
 

@@ -3,7 +3,8 @@ package org.pi.dto;
 import java.time.LocalDateTime;
 
 public class PortafolioDTO {
-    private int idPortafolio;
+    // CAMBIO: De idPortafolio a idImagen
+    private int idImagen;
     private String titulo;
     private String descripcion;
     private String urlImagen;
@@ -12,9 +13,10 @@ public class PortafolioDTO {
     private boolean destacado;
     private int visitas;
 
-    // Getters y Setters
-    public int getIdPortafolio() { return idPortafolio; }
-    public void setIdPortafolio(int idPortafolio) { this.idPortafolio = idPortafolio; }
+    // Getters y Setters actualizados
+    public int getIdImagen() { return idImagen; } // Renombrado
+    public void setIdImagen(int idImagen) { this.idImagen = idImagen; } // Renombrado
+
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = titulo; }
     public String getDescripcion() { return descripcion; }
