@@ -8,6 +8,7 @@ public class ServicioDTO {
     private int duracion;
     private String categoria;
     private boolean activo;
+    private String imagenURL; // Campo añadido
     private double valoracionPromedio;
     private int totalValoraciones;
 
@@ -26,6 +27,8 @@ public class ServicioDTO {
     public void setCategoria(String categoria) { this.categoria = categoria; }
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
+    public String getImagenURL() { return imagenURL; } // Getter añadido
+    public void setImagenURL(String imagenURL) { this.imagenURL = imagenURL; } // Setter añadido
     public double getValoracionPromedio() { return valoracionPromedio; }
     public void setValoracionPromedio(double valoracionPromedio) { this.valoracionPromedio = valoracionPromedio; }
     public int getTotalValoraciones() { return totalValoraciones; }

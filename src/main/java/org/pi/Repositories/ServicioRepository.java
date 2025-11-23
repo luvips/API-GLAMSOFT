@@ -18,7 +18,8 @@ public class ServicioRepository {
         dto.setPrecio(rs.getDouble("precio"));
         dto.setDuracion(rs.getInt("duracion_minutos"));
         dto.setActivo(rs.getBoolean("activo"));
-        
+        dto.setImagenURL(rs.getString("imagen")); // Mapeo añadido
+
         // Estos campos pueden no estar en todas las consultas
         if (hasColumn(rs, "nombre_categoria")) {
             dto.setCategoria(rs.getString("nombre_categoria"));
