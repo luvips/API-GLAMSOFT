@@ -201,4 +201,38 @@ public class UsuarioController {
         response.put("message", message);
         ctx.status(statusCode).json(response);
     }
+    // ✅ NUEVO MÉTODO: Buscar por teléfono
+    public void getByTelefono(Context ctx) {
+        try {
+            String telefono = ctx.pathParam("telefono");
+
+            if (telefono == null || telefono.trim().isEmpty()) {
+                errorResponse(ctx, 400, "El teléfono es obligatorio.");
+                return;
+            }
+
+            // Usamos el servicio que ya existe
+            Usuario usuario = usuarioService.findUserByTelefono(telefono);
+
+            if (usuario == null) {
+                errorResponse(ctx, 404, "Usuario no encontrado.");
+                return;
+            }
+
+            // Devolvemos solo datos seguros (sin contraseña)
+            Map<String, Object> data = new HashMap<>();
+            data.put("idUsuario", usuario.getIdUsuario());
+            data.put("nombre", usuario.getNombre());
+            data.put("email", usuario.getEmail());
+            data.put("telefono", usuario.getTelefono());
+            data.put("idRol", usuario.getIdRol());
+
+            successResponse(ctx, 200, "Usuario encontrado", data);
+
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 500, "Error interno: " + e.getMessage());
+        }
+    }
 }

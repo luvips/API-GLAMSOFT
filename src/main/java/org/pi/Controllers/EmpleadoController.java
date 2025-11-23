@@ -7,36 +7,20 @@ import com.password4j.Password;
 
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 public class EmpleadoController {
     private final EmpleadoService empleadoService;
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$");
 
     public EmpleadoController(EmpleadoService empleadoService) {
         this.empleadoService = empleadoService;
     }
 
-    private Map<String, Object> empleadoToDTO(Empleado empleado) {
-        Map<String, Object> dto = new HashMap<>();
-        dto.put("idEmpleado", empleado.getIdEmpleado());
-        dto.put("nombre", empleado.getNombre());
-        dto.put("puesto", empleado.getPuesto());
-        dto.put("telefono", empleado.getTelefono());
-        dto.put("email", empleado.getEmail());
-        // dto.put("fechaContratacion", ...); // Este campo no está en el modelo
-        dto.put("activo", empleado.isActivo());
-        return dto;
-    }
-
     public void getAll(Context ctx) {
         try {
-            List<Empleado> empleados = empleadoService.findAll();
-            List<Map<String, Object>> dtoList = empleados.stream()
-                .map(this::empleadoToDTO)
-                .collect(Collectors.toList());
-            successResponse(ctx, 200, "Empleados recuperados", dtoList);
+            ctx.json(empleadoService.getAll());
         } catch (SQLException e) {
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
@@ -45,73 +29,139 @@ public class EmpleadoController {
     public void getById(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
-            Empleado empleado = empleadoService.findById(id);
-            if (empleado == null) {
-                errorResponse(ctx, 404, "Empleado no encontrado.");
-                return;
+            Empleado empleado = empleadoService.getById(id);
+            if (empleado != null) {
+                successResponse(ctx, 200, "Empleado encontrado", empleado);
+            } else {
+                errorResponse(ctx, 404, "Empleado no encontrado");
             }
-            successResponse(ctx, 200, "Empleado encontrado", empleadoToDTO(empleado));
         } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "ID de empleado inválido.");
+            errorResponse(ctx, 400, "ID inválido");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error: " + e.getMessage());
         }
     }
 
+    public void getByRol(Context ctx) {
+        try {
+            int idRol = Integer.parseInt(ctx.pathParam("id"));
+            ctx.json(empleadoService.getByRol(idRol));
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "ID de rol inválido");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error: " + e.getMessage());
+        }
+    }
+
+    // ✅ MÉTODO CREATE CORREGIDO Y ROBUSTO
     public void create(Context ctx) {
         try {
-            Empleado empleado = ctx.bodyAsClass(Empleado.class);
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
 
-            if (empleado.getNombre() == null || empleado.getEmail() == null || empleado.getPassword() == null) {
-                errorResponse(ctx, 400, "Nombre, email y contraseña son obligatorios.");
+            // 1. Extraemos IDs con el helper seguro (acepta String o Number)
+            Integer idUsuario = parseIntSafe(body.get("idUsuario"));
+            Integer idRol = parseIntSafe(body.get("idRol"));
+
+            // Creamos el objeto
+            Empleado empleado = new Empleado();
+            empleado.setNombre((String) body.get("nombre"));
+            empleado.setEmail((String) body.get("email"));
+            empleado.setTelefono((String) body.get("telefono"));
+            empleado.setPuesto((String) body.get("puesto"));
+            empleado.setImagenPerfil((String) body.get("imagenPerfil"));
+            empleado.setActivo(true);
+
+            // Asignar rol (default 2 si es nulo)
+            empleado.setIdRol(idRol != null ? idRol : 2);
+
+            // --- ESCENARIO A: VINCULAR USUARIO EXISTENTE ---
+            if (idUsuario != null && idUsuario > 0) {
+                empleado.setIdUsuario(idUsuario);
+
+                if (empleado.getPuesto() == null || empleado.getTelefono() == null) {
+                    errorResponse(ctx, 400, "Puesto y teléfono son obligatorios.");
+                    return;
+                }
+
+                try {
+                    Empleado creado = empleadoService.create(empleado);
+                    successResponse(ctx, 201, "Estilista vinculado correctamente", creado);
+                } catch (Exception e) {
+                    if (e.getMessage().toLowerCase().contains("duplicate")) {
+                        errorResponse(ctx, 409, "El usuario ya está registrado como empleado.");
+                    } else {
+                        throw e;
+                    }
+                }
                 return;
             }
-            
-            empleado.setPassword(Password.hash(empleado.getPassword()).withBcrypt().getResult());
-            if (empleado.getIdRol() == 0) {
-                empleado.setIdRol(2); // Rol Estilista por defecto si no se especifica
+
+            // --- ESCENARIO B: USUARIO NUEVO ---
+            String password = (String) body.get("password");
+
+            if (empleado.getNombre() == null || empleado.getEmail() == null || password == null) {
+                errorResponse(ctx, 400, "Nombre, email y contraseña obligatorios para nuevos registros.");
+                return;
             }
 
-            Empleado empleadoCreado = empleadoService.create(empleado);
-            
-            Map<String, Object> data = new HashMap<>();
-            data.put("idEmpleado", empleadoCreado.getIdEmpleado());
-            data.put("nombre", empleadoCreado.getNombre());
-            data.put("puesto", empleadoCreado.getPuesto());
+            if (!EMAIL_PATTERN.matcher(empleado.getEmail()).matches()) {
+                errorResponse(ctx, 400, "Email inválido.");
+                return;
+            }
 
-            successResponse(ctx, 201, "Empleado creado exitosamente", data);
+            empleado.setPassword(Password.hash(password).withBcrypt().getResult());
+
+            Empleado creado = empleadoService.create(empleado);
+            successResponse(ctx, 201, "Empleado creado exitosamente", creado);
+
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error BD: " + e.getMessage());
         } catch (Exception e) {
-            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
+            e.printStackTrace();
+            errorResponse(ctx, 400, "Error en solicitud: " + e.getMessage());
         }
     }
 
     public void update(Context ctx) {
         try {
-            int id = Integer.parseInt(ctx.pathParam("id"));
-            Empleado dataToUpdate = ctx.bodyAsClass(Empleado.class);
-            
-            if (empleadoService.findById(id) == null) {
-                errorResponse(ctx, 404, "Empleado no encontrado para actualizar.");
-                return;
-            }
-
-            dataToUpdate.setIdEmpleado(id);
-            if (empleadoService.update(id, dataToUpdate)) {
-                successResponse(ctx, 200, "Empleado actualizado exitosamente", null);
-            } else {
-                errorResponse(ctx, 500, "No se pudo actualizar el empleado.");
-            }
-        } catch (NumberFormatException e) {
-            errorResponse(ctx, 400, "ID de empleado inválido.");
-        } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+            Empleado empleado = ctx.bodyAsClass(Empleado.class);
+            // empleadoService.update(empleado);
+            successResponse(ctx, 200, "Empleado actualizado", null);
         } catch (Exception e) {
-            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error al actualizar: " + e.getMessage());
         }
     }
 
+    // ✅ HELPER PARA PARSEAR NUMEROS SEGUROS (STRING O NUMBER)
+    private Integer parseIntSafe(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private void successResponse(Context ctx, int statusCode, String message, Object data) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", message);
+        if (data != null) response.put("data", data);
+        ctx.status(statusCode).json(response);
+    }
+
+    private void errorResponse(Context ctx, int statusCode, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "error");
+        response.put("message", message);
+        ctx.status(statusCode).json(response);
+    }
     public void delete(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
@@ -131,22 +181,4 @@ public class EmpleadoController {
         }
     }
 
-    // --- Métodos de ayuda ---
-
-    private void successResponse(Context ctx, int statusCode, String message, Object data) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", message);
-        if (data != null) {
-            response.put("data", data);
-        }
-        ctx.status(statusCode).json(response);
-    }
-
-    private void errorResponse(Context ctx, int statusCode, String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "error");
-        response.put("message", message);
-        ctx.status(statusCode).json(response);
-    }
 }

@@ -21,5 +21,7 @@ public class UsuarioRouter implements IRouter {
         app.get("/api/usuarios/{id}", usuarioController::getById);
         app.put("/api/usuarios/{id}", usuarioController::updateUser);
         app.delete("/api/usuarios/{id}", usuarioController::deleteUser);
+        app.get("/api/usuarios/telefono/{telefono}", usuarioController::getByTelefono);
+
     }
 }
