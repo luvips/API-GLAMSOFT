@@ -75,7 +75,7 @@ public class ServicioRepository {
                      "FROM servicio s " +
                      "JOIN categoria c ON s.id_categoria = c.id_categoria " +
                      "LEFT JOIN valoracion v ON s.id_servicio = v.id_servicio " +
-                     "WHERE s.id_servicio = ? AND s.activo = TRUE " +
+                     "WHERE s.id_servicio = ? " +
                      "GROUP BY s.id_servicio, c.nombre_categoria";
 
         try (Connection conn = DBconfig.getDataSource().getConnection();
