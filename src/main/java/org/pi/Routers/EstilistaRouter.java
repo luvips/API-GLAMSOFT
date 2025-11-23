@@ -19,7 +19,10 @@ public class EstilistaRouter implements IRouter {
         app.put("/api/estilistas/{id}", estilistaController::update);
         app.delete("/api/estilistas/{id}", estilistaController::delete);
         
-        // Ruta para encontrar estilistas disponibles para un servicio específico
-        app.post("/api/estilistas/servicio/{idServicio}", estilistaController::findEstilistaServicio);
+        // Ruta GET para encontrar estilistas por servicio (estándar)
+        app.get("/api/estilistas/servicios/{idServicio}", estilistaController::getEstilistasByServicio);
+        
+        // Ruta POST para encontrar estilistas por servicio (legado/alternativa)
+        app.post("/api/estilistas/servicio/{idServicio}", estilistaController::getEstilistasByServicio);
     }
 }

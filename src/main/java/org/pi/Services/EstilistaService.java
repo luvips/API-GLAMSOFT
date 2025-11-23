@@ -39,7 +39,7 @@ public class EstilistaService {
         return estilistaRepository.delete(id);
     }
 
-    public List<EstilistaDTO> findEstilistasByServicio(int idServicio) throws SQLException {
+    public List<EstilistaDTO> getEstilistasByServicio(int idServicio) throws SQLException {
         return estilistaRepository.findEstilistasByServicio(idServicio);
     }
 }

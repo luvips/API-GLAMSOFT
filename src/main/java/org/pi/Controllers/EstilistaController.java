@@ -114,15 +114,15 @@ public class EstilistaController {
         }
     }
 
-    public void findEstilistaServicio(Context ctx) {
+    public void getEstilistasByServicio(Context ctx) {
         try {
             int idServicio = Integer.parseInt(ctx.pathParam("idServicio"));
-            List<EstilistaDTO> estilistas = estilistaService.findEstilistasByServicio(idServicio);
-            successResponse(ctx, 200, "Estilistas encontrados para el servicio", estilistas);
+            List<EstilistaDTO> estilistas = estilistaService.getEstilistasByServicio(idServicio);
+            successResponse(ctx, 200, "Estilistas que ofrecen el servicio recuperados", estilistas);
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "ID de servicio inválido.");
         } catch (SQLException e) {
-            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+            errorResponse(ctx, 500, "Error al obtener estilistas: " + e.getMessage());
         }
     }
 
