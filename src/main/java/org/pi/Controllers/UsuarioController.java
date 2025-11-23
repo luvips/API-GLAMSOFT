@@ -53,9 +53,9 @@ public class UsuarioController {
             data.put("nombre", usuarioCreado.getNombre());
             data.put("telefono", usuarioCreado.getTelefono());
             data.put("email", usuarioCreado.getEmail());
-            data.put("rol", "Cliente"); // Asumiendo rol fijo en registro
-
-            successResponse(ctx, 201, "Usuario registrado exitosamente", data);
+            String nombreRol = (usuarioCreado.getIdRol() == 1) ? "Admin" :
+                    (usuarioCreado.getIdRol() == 2) ? "Estilista" : "Cliente";
+            data.put("rol", nombreRol);
 
         } catch (SQLException e) {
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
@@ -90,7 +90,7 @@ public class UsuarioController {
                 usuarioData.put("nombre", userFromDB.getNombre());
                 usuarioData.put("telefono", userFromDB.getTelefono());
                 usuarioData.put("email", userFromDB.getEmail());
-                usuarioData.put("rol", "Cliente"); // Debería obtenerse del rol real
+                usuarioData.put("idRol", userFromDB.getIdRol());
 
                 Map<String, Object> data = new HashMap<>();
                 data.put("token", token);
