@@ -191,7 +191,7 @@ public class CitaController {
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
-    
+
     public void getByCliente(Context ctx) {
         try {
             int idCliente = Integer.parseInt(ctx.pathParam("idCliente"));
@@ -204,6 +204,10 @@ public class CitaController {
                 simpleJson.put("estado", c.getEstadoCita().toLowerCase());
                 simpleJson.put("estilista", c.getNombreEstilista());
                 simpleJson.put("servicios", c.getServicios().stream().map(CitaDTO.ServicioDTO::getNombre).collect(Collectors.toList()));
+
+                simpleJson.put("fechaSolicitud", c.getFechaSolicitud() != null ? c.getFechaSolicitud().toLocalDate().toString() : c.getFechaHoraCita().toLocalDate().toString());
+                simpleJson.put("precioTotal", c.getPrecioTotal());
+
                 return simpleJson;
             }).collect(Collectors.toList());
             successResponse(ctx, 200, "Citas del cliente recuperadas", response);

@@ -8,6 +8,8 @@ public class CitaDTO {
     // Campos principales de la cita
     private int idCita;
     private LocalDateTime fechaHoraCita;
+    private LocalDateTime fechaSolicitud;
+    private LocalDateTime fechaFinalizacion;
     private String estadoCita;
     private String notas;
     private double precioTotal;
@@ -30,6 +32,10 @@ public class CitaDTO {
     public void setIdCita(int idCita) { this.idCita = idCita; }
     public LocalDateTime getFechaHoraCita() { return fechaHoraCita; }
     public void setFechaHoraCita(LocalDateTime fechaHoraCita) { this.fechaHoraCita = fechaHoraCita; }
+    public LocalDateTime getFechaSolicitud() { return fechaSolicitud; }
+    public void setFechaSolicitud(LocalDateTime fechaSolicitud) { this.fechaSolicitud = fechaSolicitud; }
+    public LocalDateTime getFechaFinalizacion() { return fechaFinalizacion; }
+    public void setFechaFinalizacion(LocalDateTime fechaFinalizacion) { this.fechaFinalizacion = fechaFinalizacion; }
     public String getEstadoCita() { return estadoCita; }
     public void setEstadoCita(String estadoCita) { this.estadoCita = estadoCita; }
     public String getNotas() { return notas; }
