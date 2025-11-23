@@ -51,6 +51,7 @@ public class ComentarioController {
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "ID de cliente inválido.");
         } catch (SQLException e) {
+            e.printStackTrace();
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
@@ -58,30 +59,51 @@ public class ComentarioController {
     public void create(Context ctx) {
         try {
             Map<String, Object> body = ctx.bodyAsClass(Map.class);
+
+            // Validaciones de seguridad para evitar NullPointerException
+            if (body.get("idCliente") == null || body.get("contenido") == null) {
+                errorResponse(ctx, 400, "Faltan datos obligatorios (idCliente o contenido).");
+                return;
+            }
+
             Comentario comentario = new Comentario();
             comentario.setIdCliente((Integer) body.get("idCliente"));
             comentario.setComentario((String) body.get("contenido"));
-            comentario.setIdCita((Integer) body.get("idCita"));
 
-            if (comentario.getComentario() == null || comentario.getComentario().trim().isEmpty()) {
+            // ✅ CORRECCIÓN: Manejo seguro de idCita
+            if (body.get("idCita") != null) {
+                comentario.setIdCita((Integer) body.get("idCita"));
+            } else {
+                // Si tu lógica de negocio PERMITE comentarios sin cita, descomenta esto y ajusta la BD:
+                // comentario.setIdCita(0);
+
+                // Si es OBLIGATORIO (como está en tu BD actual), devolvemos error 400:
+                errorResponse(ctx, 400, "Es necesario asociar el comentario a una Cita (idCita).");
+                return;
+            }
+
+            if (comentario.getComentario().trim().isEmpty()) {
                 errorResponse(ctx, 400, "El contenido del comentario no puede estar vacío.");
                 return;
             }
 
             Comentario comentarioCreado = comentarioService.create(comentario);
-            
+
             Map<String, Object> data = new HashMap<>();
             data.put("idComentario", comentarioCreado.getIdComentario());
             data.put("fecha", LocalDateTime.now().toString());
 
             successResponse(ctx, 201, "Comentario creado exitosamente", data);
         } catch (SQLException e) {
+            e.printStackTrace();
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         } catch (Exception e) {
+            e.printStackTrace();
             errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
         }
     }
 
+    // ... (Métodos update, delete y helpers se mantienen igual)
     public void update(Context ctx) {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
@@ -96,7 +118,7 @@ public class ComentarioController {
                 errorResponse(ctx, 400, "El contenido no puede estar vacío.");
                 return;
             }
-            
+
             Comentario comentario = new Comentario();
             comentario.setComentario(contenido);
 
@@ -132,8 +154,6 @@ public class ComentarioController {
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
     }
-
-    // --- Métodos de ayuda ---
 
     private void successResponse(Context ctx, int statusCode, String message, Object data) {
         Map<String, Object> response = new HashMap<>();
