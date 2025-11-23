@@ -1,8 +1,10 @@
 package org.pi.Repositories;
 
+import com.google.gson.Gson;
 import org.pi.Config.DBconfig;
 import org.pi.Models.Cita;
 import org.pi.dto.CitaDTO;
+import org.pi.dto.RespuestaFormularioDTO;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -104,13 +106,17 @@ public class CitaRepository {
     public List<CitaDTO> findByEstilista(int idEstilista) throws SQLException {
         return findCitasDetailed("WHERE c.id_estilista = ?", idEstilista);
     }
+    
+    public List<CitaDTO> findByEstado(String estado) throws SQLException {
+        return findCitasDetailed("WHERE c.estado_cita = ?", estado);
+    }
 
     public List<CitaDTO> findByMonth(int mes, int year) throws SQLException {
         return findCitasDetailed("WHERE MONTH(c.fecha_hora_cita) = ? AND YEAR(c.fecha_hora_cita) = ?", mes, year);
     }
 
-    public Cita save(Cita cita, List<Integer> servicios) throws SQLException {
-        String sqlCita = "INSERT INTO cita(fecha_hora_cita, estado_cita, notas, id_cliente, id_estilista) VALUES(?,?,?,?,?)";
+    public Cita save(Cita cita, List<Integer> servicios, List<RespuestaFormularioDTO> respuestas) throws SQLException {
+        String sqlCita = "INSERT INTO cita(fecha_hora_cita, estado_cita, notas, id_cliente, id_estilista, respuestas_formulario) VALUES(?,?,?,?,?,?)";
         String sqlRelacion = "INSERT INTO cita_servicio(id_cita, id_servicio, precio_aplicado) VALUES(?, ?, (SELECT precio FROM servicio WHERE id_servicio = ?))";
         String sqlUpdatePrecio = "UPDATE cita SET precio_total = (SELECT SUM(precio_aplicado) FROM cita_servicio WHERE id_cita = ?) WHERE id_cita = ?";
 
@@ -124,6 +130,7 @@ public class CitaRepository {
                     stmtCita.setString(3, cita.getNotas());
                     stmtCita.setInt(4, cita.getIdCliente());
                     stmtCita.setInt(5, cita.getIdEstilista());
+                    stmtCita.setString(6, new Gson().toJson(respuestas));
                     stmtCita.executeUpdate();
                     try (ResultSet rs = stmtCita.getGeneratedKeys()) {
                         if (rs.next()) {
@@ -177,6 +184,45 @@ public class CitaRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, estado);
             stmt.setInt(2, idCita);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+    
+    public boolean aprobar(int idCita, int adminId) throws SQLException {
+        String sql = "UPDATE cita SET estado_cita = 'APROBADA', fecha_aprobacion = CURRENT_TIMESTAMP, aprobada_por = ? WHERE id_cita = ?";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, adminId);
+            stmt.setInt(2, idCita);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean rechazar(int idCita, String razon) throws SQLException {
+        String sql = "UPDATE cita SET estado_cita = 'RECHAZADA', razon_rechazo = ? WHERE id_cita = ?";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, razon);
+            stmt.setInt(2, idCita);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean cancelar(int idCita, String razon) throws SQLException {
+        String sql = "UPDATE cita SET estado_cita = 'CANCELADA', razon_rechazo = ? WHERE id_cita = ?";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, razon);
+            stmt.setInt(2, idCita);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean completar(int idCita) throws SQLException {
+        String sql = "UPDATE cita SET estado_cita = 'COMPLETADA' WHERE id_cita = ?";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idCita);
             return stmt.executeUpdate() > 0;
         }
     }

@@ -13,9 +13,8 @@ public class PreguntaRouter implements IRouter {
 
     @Override
     public void register(Javalin app) {
-        app.get("/api/preguntas", preguntaController::getAll);
+        app.get("/api/servicios/{idServicio}/preguntas", preguntaController::getPreguntasByServicio);
         app.post("/api/preguntas", preguntaController::create);
-        app.get("/api/preguntas/{id}", preguntaController::getById);
         app.put("/api/preguntas/{id}", preguntaController::update);
         app.delete("/api/preguntas/{id}", preguntaController::delete);
     }

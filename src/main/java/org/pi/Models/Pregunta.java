@@ -3,38 +3,14 @@ package org.pi.Models;
 public class Pregunta {
     private int idPregunta;
     private String pregunta;
-    private String respuesta;
-    private String categoria;
+    private String tipoRespuesta;
+    private String opciones; // Se almacenará como JSON String
+    private boolean obligatoria;
+    private int orden;
     private boolean activo;
-    private int idFormulario;
+    private Integer idServicio;
 
-    public Pregunta() {
-    }
-
-    public Pregunta(String pregunta) {
-        this.pregunta = pregunta;
-    }
-    public Pregunta(int idPregunta, String pregunta) {
-        this.idPregunta = idPregunta;
-        this.pregunta = pregunta;
-    }
-
-
-    public Pregunta(int idPregunta, String pregunta, String respuesta, int idFormulario) {
-        this.idPregunta = idPregunta;
-        this.pregunta = pregunta;
-        this.respuesta = respuesta;
-        this.idFormulario = idFormulario;
-    }
-
-    public Pregunta(int idPregunta, String pregunta, String respuesta, String categoria, boolean activo, int idFormulario) {
-        this.idPregunta = idPregunta;
-        this.pregunta = pregunta;
-        this.respuesta = respuesta;
-        this.categoria = categoria;
-        this.activo = activo;
-        this.idFormulario = idFormulario;
-    }
+    // Constructores, getters y setters
 
     public int getIdPregunta() {
         return idPregunta;
@@ -52,20 +28,36 @@ public class Pregunta {
         this.pregunta = pregunta;
     }
 
-    public String getRespuesta() {
-        return respuesta;
+    public String getTipoRespuesta() {
+        return tipoRespuesta;
     }
 
-    public void setRespuesta(String respuesta) {
-        this.respuesta = respuesta;
+    public void setTipoRespuesta(String tipoRespuesta) {
+        this.tipoRespuesta = tipoRespuesta;
     }
 
-    public String getCategoria() {
-        return categoria;
+    public String getOpciones() {
+        return opciones;
     }
 
-    public void setCategoria(String categoria) {
-        this.categoria = categoria;
+    public void setOpciones(String opciones) {
+        this.opciones = opciones;
+    }
+
+    public boolean isObligatoria() {
+        return obligatoria;
+    }
+
+    public void setObligatoria(boolean obligatoria) {
+        this.obligatoria = obligatoria;
+    }
+
+    public int getOrden() {
+        return orden;
+    }
+
+    public void setOrden(int orden) {
+        this.orden = orden;
     }
 
     public boolean isActivo() {
@@ -76,11 +68,11 @@ public class Pregunta {
         this.activo = activo;
     }
 
-    public int getIdFormulario() {
-        return idFormulario;
+    public Integer getIdServicio() {
+        return idServicio;
     }
 
-    public void setIdFormulario(int idFormulario) {
-        this.idFormulario = idFormulario;
+    public void setIdServicio(Integer idServicio) {
+        this.idServicio = idServicio;
     }
 }

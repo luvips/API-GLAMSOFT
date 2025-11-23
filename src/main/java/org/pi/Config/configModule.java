@@ -13,7 +13,12 @@ public class configModule {
     }
 
     public static CitaRouter initCitaRouter() {
-        return new CitaRouter(new CitaController(new CitaService(new CitaRepository())));
+        NotificacionRepository notificacionRepository = new NotificacionRepository();
+        NotificacionService notificacionService = new NotificacionService(notificacionRepository);
+        UsuarioRepository usuarioRepository = new UsuarioRepository();
+        CitaRepository citaRepository = new CitaRepository();
+        CitaService citaService = new CitaService(citaRepository, notificacionService, usuarioRepository);
+        return new CitaRouter(new CitaController(citaService));
     }
 
     public static ComentarioRouter initComentarioRouter() {
@@ -62,5 +67,9 @@ public class configModule {
 
     public static ValoracionRouter initValoracionRouter() {
         return new ValoracionRouter(new ValoracionController(new ValoracionService(new ValoracionRepository())));
+    }
+    
+    public static NotificacionRouter initNotificacionRouter() {
+        return new NotificacionRouter(new NotificacionController(new NotificacionService(new NotificacionRepository())));
     }
 }

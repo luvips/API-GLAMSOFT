@@ -4,6 +4,8 @@ import org.pi.Config.DBconfig;
 import org.pi.Models.Usuario;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UsuarioRepository {
 
@@ -17,6 +19,23 @@ public class UsuarioRepository {
                 rs.getInt("id_rol"),
                 rs.getBoolean("activo")
         );
+    }
+
+    public List<Integer> findAdminAndEstilistaIds(int idEstilista) throws SQLException {
+        List<Integer> ids = new ArrayList<>();
+        String sql = "SELECT id_usuario FROM usuario WHERE id_rol = 1 " + // Admins
+                     "UNION " +
+                     "SELECT id_usuario FROM empleado WHERE id_empleado = ?"; // Estilista
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idEstilista);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    ids.add(rs.getInt("id_usuario"));
+                }
+            }
+        }
+        return ids;
     }
 
     public Usuario findUserById(int id) throws SQLException {

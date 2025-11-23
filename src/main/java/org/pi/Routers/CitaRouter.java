@@ -13,19 +13,16 @@ public class CitaRouter implements IRouter {
 
     @Override
     public void register(Javalin app) {
-        // Rutas CRUD estándar para Citas
+        // --- Flujo de aprobación y gestión de estado ---
+        app.get("/api/citas/pendientes", citaController::getCitasPendientes);
+        app.put("/api/citas/{id}/aprobar", citaController::aprobarCita);
+        app.put("/api/citas/{id}/rechazar", citaController::rechazarCita);
+        app.put("/api/citas/{id}/completar", citaController::completarCita);
+        app.put("/api/citas/{id}/cancelar", citaController::cancelarCita);
+
+        // --- Rutas CRUD básicas ---
         app.get("/api/citas", citaController::getAll);
         app.post("/api/citas", citaController::create);
         app.get("/api/citas/{id}", citaController::getById);
-        app.put("/api/citas/{id}", citaController::update);
-        app.delete("/api/citas/{id}", citaController::delete);
-
-        // Ruta para actualizar solo el estado
-        app.put("/api/citas/{id}/estado", citaController::updateEstado);
-
-        // Rutas de consulta específicas
-        app.get("/api/citas/cliente/{idCliente}", citaController::getByCliente);
-        app.get("/api/citas/estilista/{idEstilista}", citaController::getByEstilista);
-        app.get("/api/citas/mes/{mes}/{year}", citaController::getByMonth);
     }
 }
