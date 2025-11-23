@@ -123,7 +123,6 @@ public class CitaController {
         }
     }
 
-    // --- Métodos existentes (getAll, getById, etc.) ---
     public void getAll(Context ctx) {
         try {
             String estado = ctx.queryParam("estado");
@@ -146,6 +145,68 @@ public class CitaController {
             successResponse(ctx, 200, "Cita encontrada", cita);
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "ID de cita inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void getByCliente(Context ctx) {
+        try {
+            int idCliente = Integer.parseInt(ctx.pathParam("id"));
+            List<CitaDTO> citas = citaService.findByCliente(idCliente);
+            successResponse(ctx, 200, "Citas del cliente recuperadas", citas);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "ID de cliente inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void getByEstilista(Context ctx) {
+        try {
+            int idEstilista = Integer.parseInt(ctx.pathParam("id"));
+            List<CitaDTO> citas = citaService.findByEstilista(idEstilista);
+            successResponse(ctx, 200, "Citas del estilista recuperadas", citas);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "ID de estilista inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void getByWeek(Context ctx) {
+        try {
+            int semana = Integer.parseInt(ctx.pathParam("semana"));
+            int year = Integer.parseInt(ctx.pathParam("year"));
+            List<CitaDTO> citas = citaService.findByWeek(semana, year);
+            successResponse(ctx, 200, "Citas de la semana recuperadas", citas);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "Semana o año inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void getByMonth(Context ctx) {
+        try {
+            int mes = Integer.parseInt(ctx.pathParam("mes"));
+            int year = Integer.parseInt(ctx.pathParam("year"));
+            List<CitaDTO> citas = citaService.findByMonth(mes, year);
+            successResponse(ctx, 200, "Citas del mes recuperadas", citas);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "Mes o año inválido.");
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        }
+    }
+
+    public void getByYear(Context ctx) {
+        try {
+            int year = Integer.parseInt(ctx.pathParam("year"));
+            List<CitaDTO> citas = citaService.findByYear(year);
+            successResponse(ctx, 200, "Citas del año recuperadas", citas);
+        } catch (NumberFormatException e) {
+            errorResponse(ctx, 400, "Año inválido.");
         } catch (SQLException e) {
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }

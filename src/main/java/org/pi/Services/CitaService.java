@@ -45,11 +45,25 @@ public class CitaService {
         return citaRepository.findByEstado("PENDIENTE");
     }
 
+    public List<CitaDTO> findByWeek(int semana, int anio) throws SQLException {
+        if (semana < 1 || semana > 53 || anio < 2000) {
+            throw new IllegalArgumentException("Semana o año inválido.");
+        }
+        return citaRepository.findByWeek(semana, anio);
+    }
+
     public List<CitaDTO> findByMonth(int mes, int anio) throws SQLException {
         if (mes < 1 || mes > 12 || anio < 2000) {
             throw new IllegalArgumentException("Mes o año inválido.");
         }
         return citaRepository.findByMonth(mes, anio);
+    }
+
+    public List<CitaDTO> findByYear(int anio) throws SQLException {
+        if (anio < 2000) {
+            throw new IllegalArgumentException("Año inválido.");
+        }
+        return citaRepository.findByYear(anio);
     }
 
     public Cita create(Cita cita, List<Integer> servicios, List<RespuestaFormularioDTO> respuestas) throws SQLException, IllegalArgumentException {

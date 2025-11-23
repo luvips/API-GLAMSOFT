@@ -20,9 +20,18 @@ public class CitaRouter implements IRouter {
         app.put("/api/citas/{id}/completar", citaController::completarCita);
         app.put("/api/citas/{id}/cancelar", citaController::cancelarCita);
 
-        // --- Rutas CRUD básicas ---
+        // --- Rutas CRUD y de consulta ---
         app.get("/api/citas", citaController::getAll);
         app.post("/api/citas", citaController::create);
         app.get("/api/citas/{id}", citaController::getById);
+        
+        // --- Rutas de consulta específicas ---
+        app.get("/api/citas/cliente/{id}", citaController::getByCliente);
+        app.get("/api/citas/estilista/{id}", citaController::getByEstilista);
+        
+        // --- Rutas de consulta por fecha ---
+        app.get("/api/citas/semana/{semana}/{year}", citaController::getByWeek);
+        app.get("/api/citas/mes/{mes}/{year}", citaController::getByMonth);
+        app.get("/api/citas/year/{year}", citaController::getByYear);
     }
 }

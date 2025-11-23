@@ -111,8 +111,16 @@ public class CitaRepository {
         return findCitasDetailed("WHERE c.estado_cita = ?", estado);
     }
 
+    public List<CitaDTO> findByWeek(int semana, int year) throws SQLException {
+        return findCitasDetailed("WHERE WEEK(c.fecha_hora_cita, 1) = ? AND YEAR(c.fecha_hora_cita) = ?", semana, year);
+    }
+
     public List<CitaDTO> findByMonth(int mes, int year) throws SQLException {
         return findCitasDetailed("WHERE MONTH(c.fecha_hora_cita) = ? AND YEAR(c.fecha_hora_cita) = ?", mes, year);
+    }
+
+    public List<CitaDTO> findByYear(int year) throws SQLException {
+        return findCitasDetailed("WHERE YEAR(c.fecha_hora_cita) = ?", year);
     }
 
     public Cita save(Cita cita, List<Integer> servicios, List<RespuestaFormularioDTO> respuestas) throws SQLException {
