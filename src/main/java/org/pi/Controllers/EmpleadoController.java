@@ -124,10 +124,32 @@ public class EmpleadoController {
 
     public void update(Context ctx) {
         try {
-            Empleado empleado = ctx.bodyAsClass(Empleado.class);
-            // empleadoService.update(empleado);
-            successResponse(ctx, 200, "Empleado actualizado", null);
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            // Usamos Map para flexibilidad
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+
+            Empleado empleado = empleadoService.getById(id);
+            if (empleado == null) {
+                errorResponse(ctx, 404, "Empleado no encontrado.");
+                return;
+            }
+
+            // Actualizamos campos si vienen en el JSON
+            if (body.containsKey("puesto")) empleado.setPuesto((String) body.get("puesto"));
+            if (body.containsKey("imagenPerfil")) empleado.setImagenPerfil((String) body.get("imagenPerfil"));
+
+            // Si también quieres permitir actualizar datos de usuario base (nombre/tel) desde aquí:
+            if (body.containsKey("nombre")) empleado.setNombre((String) body.get("nombre"));
+            if (body.containsKey("telefono")) empleado.setTelefono((String) body.get("telefono"));
+            if (body.containsKey("email")) empleado.setEmail((String) body.get("email"));
+
+            if (empleadoService.update(empleado)) {
+                successResponse(ctx, 200, "Estilista actualizado correctamente", empleado);
+            } else {
+                errorResponse(ctx, 500, "No se pudieron guardar los cambios.");
+            }
         } catch (Exception e) {
+            e.printStackTrace();
             errorResponse(ctx, 500, "Error al actualizar: " + e.getMessage());
         }
     }

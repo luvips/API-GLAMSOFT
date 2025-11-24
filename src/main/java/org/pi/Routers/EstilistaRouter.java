@@ -24,5 +24,8 @@ public class EstilistaRouter implements IRouter {
         
         // Ruta POST para encontrar estilistas por servicio (legado/alternativa)
         app.post("/api/estilistas/servicio/{idServicio}", estilistaController::getEstilistasByServicio);
+        app.post("/api/estilistas/servicios", estilistaController::createServicio);
+        app.post("/api/estilistas/horarios", estilistaController::createHorario);
+
     }
 }

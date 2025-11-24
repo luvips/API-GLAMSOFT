@@ -42,4 +42,13 @@ public class EstilistaService {
     public List<EstilistaDTO> getEstilistasByServicio(int idServicio) throws SQLException {
         return estilistaRepository.findEstilistasByServicio(idServicio);
     }
+    // ✅ NUEVO
+    public boolean createServicio(int idEstilista, int idServicio) throws SQLException {
+        return estilistaRepository.asignarServicio(idEstilista, idServicio);
+    }
+
+    // ✅ NUEVO
+    public boolean createHorario(int idEstilista, String dia, String inicio, String fin) throws SQLException {
+        return estilistaRepository.asignarHorario(idEstilista, dia, inicio, fin);
+    }
 }

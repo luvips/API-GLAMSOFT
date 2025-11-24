@@ -73,7 +73,7 @@ public class EstilistaController {
         try {
             int id = Integer.parseInt(ctx.pathParam("id"));
             Estilista estilista = ctx.bodyAsClass(Estilista.class);
-            
+
             if (estilistaService.findById(id) == null) {
                 errorResponse(ctx, 404, "Estilista no encontrado para actualizar.");
                 return;
@@ -143,5 +143,59 @@ public class EstilistaController {
         response.put("status", "error");
         response.put("message", message);
         ctx.status(statusCode).json(response);
+    }
+    // ✅ NUEVO: Endpoint para asignar servicio
+    public void createServicio(Context ctx) {
+        try {
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+            Integer idEstilista = parseIntSafe(body.get("idEstilista"));
+            Integer idServicio = parseIntSafe(body.get("idServicio"));
+
+            if (idEstilista == null || idServicio == null) {
+                ctx.status(400).json(Map.of("error", "Faltan datos (idEstilista, idServicio)"));
+                return;
+            }
+
+            if (estilistaService.createServicio(idEstilista, idServicio)) {
+                ctx.status(201).json(Map.of("status", "success", "message", "Servicio asignado"));
+            } else {
+                ctx.status(400).json(Map.of("error", "No se pudo asignar"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            ctx.status(500).json(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ✅ NUEVO: Endpoint para asignar horario
+    public void createHorario(Context ctx) {
+        try {
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+            Integer idEstilista = parseIntSafe(body.get("idEstilista"));
+            String dia = (String) body.get("diaSemana");
+            String inicio = (String) body.get("horaInicio");
+            String fin = (String) body.get("horaFin");
+
+            if (idEstilista == null || dia == null) {
+                ctx.status(400).json(Map.of("error", "Faltan datos del horario"));
+                return;
+            }
+
+            if (estilistaService.createHorario(idEstilista, dia, inicio, fin)) {
+                ctx.status(201).json(Map.of("status", "success", "message", "Horario asignado"));
+            } else {
+                ctx.status(400).json(Map.of("error", "No se pudo asignar el horario"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            ctx.status(500).json(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // Helper privado para evitar errores de cast (String a Integer)
+    private Integer parseIntSafe(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try { return Integer.parseInt(value.toString()); } catch (Exception e) { return null; }
     }
 }

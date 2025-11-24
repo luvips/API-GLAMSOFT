@@ -195,4 +195,78 @@ public class EstilistaRepository {
         }
         return estilistas;
     }
+    // ✅ NUEVO: Asignar un servicio al estilista
+    public boolean asignarServicio(int idEstilista, int idServicio) throws SQLException {
+        String sql = "INSERT INTO estilista_servicio (id_estilista, id_servicio) VALUES (?, ?)";
+        try (Connection conn = DBconfig.getDataSource().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idEstilista);
+            stmt.setInt(2, idServicio);
+            // Si ya existe la relación, el catch lo ignorará
+            return stmt.executeUpdate() > 0;
+        } catch (SQLIntegrityConstraintViolationException e) {
+            return true; // Ya estaba asignado, contamos como éxito
+        }
+    }
+
+    // ✅ NUEVO: Asignar un horario (Busca si existe el horario, si no lo crea, y luego vincula)
+    public boolean asignarHorario(int idEstilista, String dia, String inicio, String fin) throws SQLException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        int idHorario = 0;
+
+        try {
+            conn = DBconfig.getDataSource().getConnection();
+
+            // 1. Verificar si el horario ya existe en la tabla 'horario'
+            String sqlCheck = "SELECT id_horario FROM horario WHERE dia_semana = ? AND hora_inicio = ? AND hora_fin = ?";
+            stmt = conn.prepareStatement(sqlCheck);
+            stmt.setString(1, dia);
+            stmt.setString(2, inicio);
+            stmt.setString(3, fin);
+            rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                idHorario = rs.getInt("id_horario");
+            } else {
+                // 2. Si no existe, crearlo
+                // Cerramos recursos previos
+                rs.close();
+                stmt.close();
+
+                String sqlInsert = "INSERT INTO horario (dia_semana, hora_inicio, hora_fin) VALUES (?, ?, ?)";
+                stmt = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+                stmt.setString(1, dia);
+                stmt.setString(2, inicio);
+                stmt.setString(3, fin);
+                stmt.executeUpdate();
+
+                rs = stmt.getGeneratedKeys();
+                if (rs.next()) {
+                    idHorario = rs.getInt(1);
+                }
+            }
+
+            // 3. Vincular en tabla intermedia 'estilista_horario'
+            if (idHorario > 0) {
+                // Cerramos resources previos
+                stmt.close();
+
+                String sqlLink = "INSERT INTO estilista_horario (id_estilista, id_horario) VALUES (?, ?)";
+                stmt = conn.prepareStatement(sqlLink);
+                stmt.setInt(1, idEstilista);
+                stmt.setInt(2, idHorario);
+                return stmt.executeUpdate() > 0;
+            }
+            return false;
+
+        } catch (SQLIntegrityConstraintViolationException e) {
+            return true; // Ya estaba asignado
+        } finally {
+            if (rs != null) rs.close();
+            if (stmt != null) stmt.close();
+            if (conn != null) conn.close();
+        }
+    }
 }
