@@ -7,6 +7,7 @@ import com.password4j.Password;
 
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -20,7 +21,8 @@ public class EmpleadoController {
 
     public void getAll(Context ctx) {
         try {
-            ctx.json(empleadoService.getAll());
+            List<Empleado> empleados = empleadoService.getAll();
+            successResponse(ctx, 200, "Empleados recuperados", empleados);
         } catch (SQLException e) {
             errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
         }
@@ -44,8 +46,9 @@ public class EmpleadoController {
 
     public void getByRol(Context ctx) {
         try {
-            int idRol = Integer.parseInt(ctx.pathParam("id"));
-            ctx.json(empleadoService.getByRol(idRol));
+            int idRol = Integer.parseInt(ctx.pathParam("idRol"));
+            List<Empleado> empleados = empleadoService.getByRol(idRol);
+            successResponse(ctx, 200, "Empleados recuperados por rol", empleados);
         } catch (NumberFormatException e) {
             errorResponse(ctx, 400, "ID de rol inválido");
         } catch (SQLException e) {

@@ -58,10 +58,50 @@ public class CitaController {
         }
     }
 
+    public void update(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("id"));
+            Map<String, Object> body = ctx.bodyAsClass(Map.class);
+
+            CitaDTO citaExistente = citaService.findById(id);
+            if (citaExistente == null) {
+                errorResponse(ctx, 404, "Cita no encontrada.");
+                return;
+            }
+
+            Cita citaActualizada = new Cita();
+            
+            citaActualizada.setFechaHoraCita(citaExistente.getFechaHoraCita());
+            citaActualizada.setIdEstilista(citaExistente.getIdEstilista());
+            citaActualizada.setNotas(citaExistente.getNotas());
+
+            if (body.containsKey("fecha") && body.containsKey("hora")) {
+                LocalDate fecha = LocalDate.parse((String) body.get("fecha"));
+                LocalTime hora = LocalTime.parse((String) body.get("hora"));
+                citaActualizada.setFechaHoraCita(LocalDateTime.of(fecha, hora));
+            }
+            if (body.containsKey("idEstilista")) {
+                citaActualizada.setIdEstilista((Integer) body.get("idEstilista"));
+            }
+            if (body.containsKey("notas")) {
+                citaActualizada.setNotas((String) body.get("notas"));
+            }
+
+            citaService.update(id, citaActualizada);
+            successResponse(ctx, 200, "Cita actualizada exitosamente", null);
+
+        } catch (IllegalArgumentException e) {
+            errorResponse(ctx, 400, e.getMessage());
+        } catch (SQLException e) {
+            errorResponse(ctx, 500, "Error de base de datos: " + e.getMessage());
+        } catch (Exception e) {
+            errorResponse(ctx, 400, "Datos de solicitud inválidos: " + e.getMessage());
+        }
+    }
+
     public void aprobarCita(Context ctx) {
         try {
             int idCita = Integer.parseInt(ctx.pathParam("id"));
-            // Aquí deberías obtener el ID del admin/estilista autenticado
             int adminId = 1; // Placeholder
             if (citaService.aprobarCita(idCita, adminId)) {
                 successResponse(ctx, 200, "Cita aprobada exitosamente", null);

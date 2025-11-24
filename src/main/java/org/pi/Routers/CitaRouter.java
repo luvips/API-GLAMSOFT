@@ -24,6 +24,7 @@ public class CitaRouter implements IRouter {
         app.get("/api/citas", citaController::getAll);
         app.post("/api/citas", citaController::create);
         app.get("/api/citas/{id}", citaController::getById);
+        app.put("/api/citas/{id}", citaController::update); // <-- RUTA AÑADIDA
         
         // --- Rutas de consulta específicas ---
         app.get("/api/citas/cliente/{id}", citaController::getByCliente);

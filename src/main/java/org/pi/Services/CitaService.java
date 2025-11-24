@@ -40,7 +40,7 @@ public class CitaService {
     public List<CitaDTO> findByEstilista(int idEstilista) throws SQLException {
         return citaRepository.findByEstilista(idEstilista);
     }
-    
+
     public List<CitaDTO> getCitasPendientes() throws SQLException {
         return citaRepository.findByEstado("PENDIENTE");
     }
@@ -82,7 +82,6 @@ public class CitaService {
         cita.setEstadoCita("PENDIENTE");
         Cita citaCreada = citaRepository.save(cita, servicios, respuestas);
 
-        // Crear notificación para todos los admins y el estilista
         List<Integer> idsParaNotificar = usuarioRepository.findAdminAndEstilistaIds(cita.getIdEstilista());
         for (Integer idUsuario : idsParaNotificar) {
             Notificacion notif = new Notificacion();
@@ -97,12 +96,30 @@ public class CitaService {
         return citaCreada;
     }
 
+    public void update(int id, Cita cita) throws SQLException, IllegalArgumentException {
+        CitaDTO existente = citaRepository.findById(id);
+        if (existente == null) {
+            throw new IllegalArgumentException("Cita con ID " + id + " no encontrada.");
+        }
+        if (cita.getFechaHoraCita().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("La fecha de la cita no puede ser en el pasado.");
+        }
+
+        boolean disponible = citaRepository.isEstilistaDisponible(cita.getIdEstilista(), cita.getFechaHoraCita());
+        if (!disponible) {
+            throw new IllegalArgumentException("El estilista no está disponible en la nueva fecha y hora seleccionadas.");
+        }
+
+        cita.setIdCita(id);
+        citaRepository.update(cita);
+    }
+
     public boolean aprobarCita(int idCita, int adminId) throws SQLException {
         CitaDTO cita = citaRepository.findById(idCita);
         if (cita == null) {
             return false;
         }
-        
+
         boolean success = citaRepository.aprobar(idCita, adminId);
         if (success) {
             Notificacion notif = new Notificacion();
@@ -169,11 +186,6 @@ public class CitaService {
             notificacionService.crearNotificacion(notif);
         }
         return success;
-    }
-
-    public boolean update(int id, Cita cita) throws SQLException, IllegalArgumentException {
-        // Lógica de actualización de cita (si es necesaria)
-        return citaRepository.update(cita);
     }
 
     public boolean delete(int id) throws SQLException {
