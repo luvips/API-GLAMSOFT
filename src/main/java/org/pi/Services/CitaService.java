@@ -108,8 +108,8 @@ public class CitaService {
             Notificacion notif = new Notificacion();
             notif.setIdUsuario(cita.getIdCliente());
             notif.setTipo("CITA_APROBADA");
-            notif.setTitulo("¡Cita confirmada!");
-            notif.setMensaje("Tu cita para el " + cita.getFechaHoraCita().toLocalDate() + " ha sido confirmada.");
+            notif.setTitulo("¡Cita aprobada!");
+            notif.setMensaje("Tu cita para el " + cita.getFechaHoraCita().toLocalDate() + " ha sido aprobada.");
             notif.setIdCita(idCita);
             notificacionService.crearNotificacion(notif);
         }
